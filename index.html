@@ -3,233 +3,162 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Agent LeLogeur v2 → Google Sheets</title>
+<title>Agent LeLogeur → Google Sheets</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@600;700;800&display=swap" rel="stylesheet">
 <style>
   :root {
-    --bg: #0e0e11;
-    --surface: #16161b;
-    --border: #2a2a32;
-    --accent: #7c6af7;
-    --accent2: #4ecdc4;
-    --text: #e8e8f0;
-    --muted: #6b6b80;
-    --success: #4ecdc4;
-    --danger: #ff6b6b;
-    --mono: 'DM Mono', monospace;
-    --display: 'Syne', sans-serif;
+    --bg: #0e0e11; --surface: #16161b; --border: #2a2a32;
+    --accent: #7c6af7; --accent2: #4ecdc4; --text: #e8e8f0;
+    --muted: #6b6b80; --success: #4ecdc4; --danger: #ff6b6b;
+    --warn: #f7c948; --mono: 'DM Mono', monospace; --display: 'Syne', sans-serif;
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { background: var(--bg); color: var(--text); font-family: var(--display); min-height: 100vh; }
   body::before {
-    content: '';
-    position: fixed; inset: 0;
+    content: ''; position: fixed; inset: 0;
     background-image: linear-gradient(var(--border) 1px, transparent 1px), linear-gradient(90deg, var(--border) 1px, transparent 1px);
-    background-size: 40px 40px;
-    opacity: 0.25; pointer-events: none; z-index: 0;
+    background-size: 40px 40px; opacity: 0.2; pointer-events: none; z-index: 0;
   }
   .glow { position: fixed; width: 500px; height: 500px; background: radial-gradient(circle, rgba(124,106,247,0.1) 0%, transparent 70%); top: -150px; left: -100px; pointer-events: none; z-index: 0; }
-
-  .wrap { position: relative; z-index: 1; max-width: 680px; margin: 0 auto; padding: 48px 24px 80px; }
-
-  .header { margin-bottom: 40px; animation: fadeUp 0.5s ease both; }
-  .badge { display: inline-flex; align-items: center; gap: 6px; font-family: var(--mono); font-size: 11px; color: var(--accent2); background: rgba(78,205,196,0.1); border: 1px solid rgba(78,205,196,0.2); border-radius: 20px; padding: 4px 12px; margin-bottom: 18px; letter-spacing: 0.08em; }
+  .wrap { position: relative; z-index: 1; max-width: 720px; margin: 0 auto; padding: 48px 24px 80px; }
+  .header { margin-bottom: 36px; animation: fadeUp 0.5s ease both; }
+  .badge { display: inline-flex; align-items: center; gap: 6px; font-family: var(--mono); font-size: 11px; color: var(--accent2); background: rgba(78,205,196,0.1); border: 1px solid rgba(78,205,196,0.2); border-radius: 20px; padding: 4px 12px; margin-bottom: 16px; letter-spacing: 0.08em; }
   .badge::before { content: '●'; font-size: 8px; }
-  h1 { font-size: clamp(28px, 5vw, 46px); font-weight: 800; line-height: 1.05; letter-spacing: -0.02em; margin-bottom: 10px; }
+  h1 { font-size: clamp(28px, 5vw, 44px); font-weight: 800; line-height: 1.05; letter-spacing: -0.02em; margin-bottom: 8px; }
   h1 span { color: var(--accent); }
-  .subtitle { font-size: 14px; color: var(--muted); line-height: 1.6; }
-
-  .stats { display: grid; grid-template-columns: repeat(3,1fr); gap: 10px; margin-bottom: 28px; animation: fadeUp 0.5s 0.1s ease both; }
-  .stat { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 14px 18px; }
-  .stat::before { content: ''; display: block; width: 100%; height: 2px; background: linear-gradient(90deg, var(--accent), var(--accent2)); border-radius: 1px; margin-bottom: 10px; opacity: 0.5; }
-  .stat-num { font-size: 28px; font-weight: 800; letter-spacing: -0.03em; line-height: 1; margin-bottom: 3px; }
+  .subtitle { font-size: 13px; color: var(--muted); line-height: 1.6; }
+  .stats { display: grid; grid-template-columns: repeat(4,1fr); gap: 10px; margin-bottom: 28px; animation: fadeUp 0.5s 0.1s ease both; }
+  .stat { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 12px 16px; }
+  .stat::before { content: ''; display: block; width: 100%; height: 2px; background: linear-gradient(90deg, var(--accent), var(--accent2)); border-radius: 1px; margin-bottom: 8px; opacity: 0.5; }
+  .stat-num { font-size: 24px; font-weight: 800; letter-spacing: -0.03em; line-height: 1; margin-bottom: 3px; }
   .stat-label { font-family: var(--mono); font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; }
-
-  .card { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 24px; margin-bottom: 14px; animation: fadeUp 0.5s 0.2s ease both; }
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 22px; margin-bottom: 14px; animation: fadeUp 0.5s 0.2s ease both; }
   .card-label { font-family: var(--mono); font-size: 10px; color: var(--accent); letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 14px; display: flex; align-items: center; gap: 8px; }
   .card-label::before { content: ''; display: inline-block; width: 14px; height: 1px; background: var(--accent); }
-
-  /* Steps */
-  .steps { display: flex; flex-direction: column; gap: 0; }
-  .step-item { display: flex; gap: 0; align-items: stretch; }
-  .step-left { display: flex; flex-direction: column; align-items: center; width: 36px; flex-shrink: 0; }
-  .step-circle { width: 28px; height: 28px; border-radius: 50%; background: rgba(124,106,247,0.15); border: 1px solid rgba(124,106,247,0.35); display: flex; align-items: center; justify-content: center; font-family: var(--mono); font-size: 11px; color: var(--accent); flex-shrink: 0; transition: background 0.3s, border-color 0.3s; }
-  .step-circle.done { background: rgba(78,205,196,0.2); border-color: var(--accent2); color: var(--accent2); }
-  .step-circle.active { background: rgba(124,106,247,0.3); border-color: var(--accent); box-shadow: 0 0 12px rgba(124,106,247,0.3); }
-  .step-line { flex: 1; width: 1px; background: var(--border); margin: 4px 0; min-height: 16px; }
-  .step-item:last-child .step-line { display: none; }
-  .step-content { padding: 2px 0 20px 14px; flex: 1; }
-  .step-title { font-size: 14px; font-weight: 600; color: var(--text); margin-bottom: 4px; line-height: 1.3; }
-  .step-desc { font-size: 12px; color: var(--muted); line-height: 1.5; font-family: var(--mono); }
-
-  /* Input */
   input[type="text"] { width: 100%; background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 12px 14px; font-family: var(--mono); font-size: 13px; color: var(--text); outline: none; transition: border-color 0.2s; margin-bottom: 6px; }
   input[type="text"]:focus { border-color: var(--accent); }
   input[type="text"]::placeholder { color: var(--muted); }
   .hint { font-family: var(--mono); font-size: 11px; color: var(--muted); }
   .hint code { color: var(--accent2); background: rgba(78,205,196,0.08); padding: 1px 5px; border-radius: 3px; }
-
-  /* Buttons */
-  .btn-primary { width: 100%; padding: 14px; background: linear-gradient(135deg, var(--accent), #5a4fd4); border: none; border-radius: 10px; color: white; font-family: var(--display); font-size: 14px; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; transition: opacity 0.2s, transform 0.15s; margin-top: 14px; position: relative; overflow: hidden; }
-  .btn-primary:hover { opacity: 0.9; transform: translateY(-1px); }
-  .btn-primary:active { transform: scale(0.98); }
-  .btn-primary:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
-  .btn-secondary { width: 100%; padding: 12px; background: transparent; border: 1px solid var(--border); border-radius: 10px; color: var(--text); font-family: var(--display); font-size: 14px; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; transition: background 0.2s; margin-top: 10px; }
-  .btn-secondary:hover { background: rgba(255,255,255,0.04); }
-  .btn-secondary:disabled { opacity: 0.4; cursor: not-allowed; }
-
-  /* Progress */
-  .progress-wrap { margin: 14px 0 4px; }
-  .progress-track { height: 3px; background: var(--border); border-radius: 2px; overflow: hidden; }
+  .btn { width: 100%; padding: 14px; background: linear-gradient(135deg, var(--accent), #5a4fd4); border: none; border-radius: 10px; color: white; font-family: var(--display); font-size: 14px; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; transition: opacity 0.2s, transform 0.15s; margin-top: 14px; }
+  .btn:hover { opacity: 0.9; transform: translateY(-1px); }
+  .btn:active { transform: scale(0.98); }
+  .btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+  .progress-track { height: 3px; background: var(--border); border-radius: 2px; overflow: hidden; margin: 14px 0 4px; }
   .progress-fill { height: 100%; background: linear-gradient(90deg, var(--accent), var(--accent2)); width: 0%; transition: width 0.5s cubic-bezier(0.4,0,0.2,1); border-radius: 2px; }
-  .progress-label { font-family: var(--mono); font-size: 11px; color: var(--muted); margin-top: 6px; min-height: 16px; }
-
-  /* Log */
-  .log { background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 14px; font-family: var(--mono); font-size: 12px; line-height: 1.8; min-height: 120px; max-height: 220px; overflow-y: auto; margin-top: 14px; }
-  .log::-webkit-scrollbar { width: 3px; }
-  .log::-webkit-scrollbar-thumb { background: var(--border); }
+  .progress-label { font-family: var(--mono); font-size: 11px; color: var(--muted); min-height: 16px; }
+  .log { background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 14px; font-family: var(--mono); font-size: 12px; line-height: 1.8; min-height: 100px; max-height: 220px; overflow-y: auto; margin-top: 14px; scrollbar-width: thin; scrollbar-color: var(--border) transparent; }
   .ll { color: var(--muted); }
   .ll.ok { color: var(--success); }
   .ll.err { color: var(--danger); }
   .ll.hi { color: var(--text); }
   .ll.head { color: var(--accent); }
-
-  /* Result */
-  .result-link { display: flex; align-items: center; justify-content: space-between; padding: 14px 16px; background: rgba(78,205,196,0.06); border: 1px solid rgba(78,205,196,0.2); border-radius: 10px; color: var(--accent2); text-decoration: none; font-family: var(--mono); font-size: 13px; font-weight: 500; margin-top: 12px; transition: background 0.2s; }
+  .result-link { display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; background: rgba(78,205,196,0.06); border: 1px solid rgba(78,205,196,0.2); border-radius: 10px; color: var(--accent2); text-decoration: none; font-family: var(--mono); font-size: 13px; margin-top: 12px; transition: background 0.2s; }
   .result-link:hover { background: rgba(78,205,196,0.12); }
-
+  .step-circle { display: inline-flex; width: 26px; height: 26px; border-radius: 50%; background: rgba(124,106,247,0.15); border: 1px solid rgba(124,106,247,0.35); align-items: center; justify-content: center; font-family: var(--mono); font-size: 11px; color: var(--accent); margin-right: 10px; flex-shrink: 0; }
+  .step-circle.done { background: rgba(78,205,196,0.2); border-color: var(--accent2); color: var(--accent2); }
   @keyframes fadeUp { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: translateY(0); } }
-  @media(max-width:480px) { .stats { grid-template-columns: repeat(2,1fr); } .stats .stat:last-child { grid-column: span 2; } }
+  @media(max-width:480px) { .stats { grid-template-columns: repeat(2,1fr); } }
 </style>
 </head>
 <body>
 <div class="glow"></div>
 <div class="wrap">
-
   <div class="header">
-    <div class="badge">LeLogeur — Agent automatisé</div>
+    <div class="badge">LeLogeur — Agent v3</div>
     <h1>Appartements<br><span>→ Google Sheets</span></h1>
-    <p class="subtitle">3 clics. Connecte Google, entre l'ID du Sheet, et l'agent crée tous les onglets automatiquement.</p>
+    <p class="subtitle">Par agent · Regroupé par rue · Anti-doublons · Mise à jour automatique</p>
   </div>
 
   <div class="stats">
-    <div class="stat"><div class="stat-num">81</div><div class="stat-label">Bâtiments</div></div>
-    <div class="stat"><div class="stat-num">128</div><div class="stat-label">Unités</div></div>
-    <div class="stat"><div class="stat-num">79+</div><div class="stat-label">Onglets</div></div>
+    <div class="stat"><div class="stat-num">76</div><div class="stat-label">Bâtiments</div></div>
+    <div class="stat"><div class="stat-num">9</div><div class="stat-label">Agents</div></div>
+    <div class="stat"><div class="stat-num">9</div><div class="stat-label">Onglets</div></div>
+    <div class="stat"><div class="stat-num">155</div><div class="stat-label">Unités</div></div>
   </div>
 
-  <!-- ÉTAPE 1 -->
-  <div class="card" id="card-step1">
+  <div class="card">
     <div class="card-label">Étape 1 — Connecter Google</div>
-    <div class="steps">
-      <div class="step-item">
-        <div class="step-left"><div class="step-circle" id="s1">1</div><div class="step-line"></div></div>
-        <div class="step-content">
-          <div class="step-title">Autoriser l'accès à Google Sheets</div>
-          <div class="step-desc">Une fenêtre Google va s'ouvrir. Choisis ton compte et clique Autoriser.</div>
-        </div>
-      </div>
-    </div>
-    <button class="btn-primary" id="btn-auth" onclick="connecterGoogle()">
-      <span>🔑</span><span id="auth-text">Connecter mon compte Google</span>
+    <button class="btn" id="btn-auth" onclick="connecterGoogle()">
+      <span class="step-circle" id="s1">1</span>
+      <span id="auth-text">Connecter mon compte Google</span>
     </button>
     <div id="auth-status"></div>
   </div>
 
-  <!-- ÉTAPE 2 -->
-  <div class="card" id="card-step2" style="opacity:0.4;pointer-events:none;">
+  <div class="card" id="card2" style="opacity:0.4;pointer-events:none;">
     <div class="card-label">Étape 2 — ID du Google Sheet</div>
     <input type="text" id="sheet-id" placeholder="1a5IxEWxm51rbfhgKk-A0NJSpvcd5HqdktE8bauRCIz8" />
     <div class="hint">Dans l'URL : docs.google.com/spreadsheets/d/<code>CET-ID</code>/edit</div>
-    <button class="btn-primary" id="btn-run" onclick="lancerAgent()" disabled>
+    <button class="btn" id="btn-run" onclick="lancerAgent()" disabled>
       <span>▶</span><span id="run-text">Lancer l'agent</span>
     </button>
   </div>
 
-  <!-- ÉTAPE 3 -->
-  <div class="card" id="card-step3" style="opacity:0.4;">
+  <div class="card" id="card3" style="opacity:0.4;">
     <div class="card-label">Progression</div>
-    <div class="progress-wrap">
-      <div class="progress-track"><div class="progress-fill" id="progress"></div></div>
-      <div class="progress-label" id="progress-label">En attente...</div>
-    </div>
-    <div class="log" id="log"><div class="ll">En attente du démarrage...</div></div>
+    <div class="progress-track"><div class="progress-fill" id="progress"></div></div>
+    <div class="progress-label" id="plabel">En attente...</div>
+    <div class="log" id="log"><div class="ll">En attente...</div></div>
     <div id="result-area"></div>
   </div>
-
 </div>
 
 <script>
-// ── CONFIG ──────────────────────────────────────────────
-// Remplace par ton propre Client ID Google OAuth
-// (gratuit sur console.cloud.google.com)
 const CLIENT_ID = '1048377543224-56s899bif9r7vrvme12uercg0noh87nq.apps.googleusercontent.com';
 const SCOPES = 'https://www.googleapis.com/auth/spreadsheets';
-
-// ── DONNÉES ─────────────────────────────────────────────
-const BUILDINGS = [{"adresse": "100 POM, 100 du Pomérol, Boisbriand (Québec) J7G 3J7", "unites": [{"appartement": "302", "bail": "2735", "locataire": "Annie Thibodeau, Marcel Roiati", "telephone": "C : (514) 994-3123 / C : (514) 862-5654", "statut": "Disponible", "loyer_prevu": "2 150,00 $", "disponible": "1 juil. 2026", "pieces": "4 ½"}]}, {"adresse": "1001 MONT-, 1001 Mont-Laval, Laval (Québec) H7X 0G3", "unites": [{"appartement": "214", "bail": "2487", "locataire": "Benoit Walsh, Lorraine Mercure", "telephone": "C : (514) 793-1242 / C : (450) 758-7552", "statut": "Disponible", "loyer_prevu": "2 190,00 $", "disponible": "1 juil. 2026", "pieces": "4 ½"}, {"appartement": "303", "bail": "", "locataire": "", "telephone": "", "statut": "Facturé", "loyer_prevu": "2 255,00 $", "disponible": "1 juil. 2026", "pieces": "4 ½"}, {"appartement": "Bail (2447)", "bail": "2447", "locataire": "Pierre Gravel", "telephone": "C : (450) 689-4294", "statut": "Disponible", "loyer_prevu": "", "disponible": "", "pieces": ""}, {"appartement": "316", "bail": "3149", "locataire": "Erika Lalumiere Laflamme", "telephone": "C : (450) 578-6505", "statut": "Disponible", "loyer_prevu": "1 880,00 $", "disponible": "1 juil. 2026", "pieces": "3 ½"}]}, {"adresse": "108, 108 Doré-Jaune, Terrebonne (Québec) J6V 0E5", "unites": [{"appartement": "112", "bail": "3875", "locataire": "Josée Lagacé", "telephone": "C : (514) 703-5589", "statut": "Disponible", "loyer_prevu": "1 480,00 $", "disponible": "1 juil. 2026", "pieces": "3 ½"}, {"appartement": "114", "bail": "3574", "locataire": "Johannie Lamothe", "telephone": "C : (514) 883-9264", "statut": "Disponible", "loyer_prevu": "1 500,00 $", "disponible": "1 juil. 2026", "pieces": "3 ½"}, {"appartement": "201", "bail": "2561", "locataire": "Line Servant", "telephone": "C : (438) 503-1507", "statut": "Disponible", "loyer_prevu": "2 095,00 $", "disponible": "", "pieces": "5 ½"}, {"appartement": "208", "bail": "1594", "locataire": "Guy Perreault, Sylvie Gauthier", "telephone": "C : (514) 606-0650 / C : (514) 219-8345", "statut": "Disponible", "loyer_prevu": "1 965,00 $", "disponible": "1 juil. 2026", "pieces": "4 ½"}, {"appartement": "211", "bail": "1789", "locataire": "Diane Frenette, Robert Leveille", "telephone": "C : (514) 356-3772 / C : (514) 386-4964", "statut": "Disponible", "loyer_prevu": "1 960,00 $", "disponible": "1 juil. 2026", "pieces": "4 ½"}, {"appartement": "212", "bail": "1766", "locataire": "Stephanie Plante", "telephone": "C : (514) 773-2762", "statut": "Disponible", "loyer_prevu": "1 480,00 $", "disponible": "1 juil. 2026", "pieces": "3 ½"}, {"appartement": "303", "bail": "464060", "locataire": "Rabelais Eldor, Stacy Girard", "telephone": "C : (514) 973-1452 / C : (514) 706-6672", "statut": "Disponible", "loyer_prevu": "1 590,00 $", "disponible": "1 juil. 2026", "pieces": "3 ½"}, {"appartement": "304", "bail": "465681", "locataire": "Karianne Baron", "telephone": "C : (438) 988-0366", "statut": "Disponible", "loyer_prevu": "1 875,00 $", "disponible": "1 juil. 2026", "pieces": "4 ½"}, {"appartement": "311", "bail": "1790", "locataire": "Benoit Gagne, Sylvie Fafard", "telephone": "C : (450) 821-5801 / C : (438) 985-1462", "statut": "Disponible", "loyer_prevu": "2 070,00 $", "disponible": "1 juil. 2026", "pieces": "4 ½"}]}, {"adresse": "1100, 1100 du Grand-Pic, Laval (Québec) H7L 0K3", "unites": [{"appartement": "1100, Du Grand Pic", "bail": "3610", "locataire": "Sidavinn Kong", "telephone": "C : (514) 623-4919", "statut": "Disponible", "loyer_prevu": "1 730,00 $", "disponible": "1 juil. 2026", "pieces": "4 ½"}]}, {"adresse": "1102, 1102 du Grand-Pic, Laval (Québec) H7L 0K3", "unites": [{"appartement": "1102, Du Grand Pic", "bail": "1444", "locataire": "Amelie Talbot", "telephone": "C : (514) 865-1793", "statut": "Disponible", "loyer_prevu": "1 920,00 $", "disponible": "1 juil. 2026", "pieces": "4 ½"}]}, {"adresse": "1104, 1104 du Grand-Pic, Laval (Québec) H7L 0K3", "unites": [{"appartement": "1104, Du Grand-Pic", "bail": "3715", "locataire": "Gabrielle Rizzi", "telephone": "C : (438) 881-5573", "statut": "Disponible", "loyer_prevu": "2 440,00 $", "disponible": "1 juil. 2026", "pieces": "4 ½"}]}, {"adresse": "1110, 1110 du Grand-Pic, Laval (Québec) H7L 0K3", "unites": [{"appartement": "1110, Du Grand Pic", "bail": "2378", "locataire": "Steve Douyon", "telephone": "C : (450) 963-5430", "statut": "Disponible", "loyer_prevu": "2 350,00 $", "disponible": "1 juil. 2026", "pieces": "4 ½"}]}, {"adresse": "1146, 1146 du Grand-Pic, Laval (Québec) H7L 0K3", "unites": [{"appartement": "1146, Du Grand Pic", "bail": "", "locataire": "", "telephone": "", "statut": "Disponible", "loyer_prevu": "1 855,00 $", "disponible": "1 juil. 2026", "pieces": "4 ½"}, {"appartement": "Bail (3983)", "bail": "3983", "locataire": "", "telephone": "C : (514) 980-1301", "statut": "", "loyer_prevu": "", "disponible": "", "pieces": ""}]}, {"adresse": "116, 116 Campagnol, Lachenaie (Québec) J6V 0G2", "unites": [{"appartement": "103", "bail": "3180", "locataire": "Tommy Malenfant", "telephone": "C : (514) 912-9579", "statut": "Disponible", "loyer_prevu": "1 650,00 $", "disponible": "1 juil. 2026", "pieces": "4 ½"}, {"appartement": "105", "bail": "464064", "locataire": "Simon Racicot", "telephone": "C : (514) 715-2586", "statut": "Disponible", "loyer_prevu": "1 315,00 $", "disponible": "1 juil. 2026", "pieces": "3 ½"}, {"appartement": "106", "bail": "3175", "locataire": "Nathalie Ndema", "telephone": "C : (437) 333-2733", "statut": "Disponible", "loyer_prevu": "1 760,00 $", "disponible": "1 juil. 2026", "pieces": "5 ½"}, {"appartement": "301", "bail": "3910", "locataire": "Coralie Chevrette-Séguin", "telephone": "C : (438) 728-5556", "statut": "Disponible", "loyer_prevu": "1 325,00 $", "disponible": "1 avr. 2026", "pieces": "3 ½"}]}, {"adresse": "1165, 1165 du Grand-Pic, Laval (Québec) H7L 0K4", "unites": [{"appartement": "1165, Du Grand Pic", "bail": "", "locataire": "", "telephone": "", "statut": "Facturé", "loyer_prevu": "1 830,00 $", "disponible": "", "pieces": "4 ½"}, {"appartement": "Bail (487081)", "bail": "487081", "locataire": "Patricia Tremblay", "telephone": "C : (514) 712-2768", "statut": "Disponible", "loyer_prevu": "", "disponible": "", "pieces": ""}]}, {"adresse": "1167, 1167 du Grand-Pic, Laval (Québec) H7L 0K4", "unites": [{"appartement": "1167, Du Grand Pic", "bail": "3722", "locataire": "Graziella Natalizio, Samantha Sanon", "telephone": "C : (438) 395-2515 / C : (438) 322-5020", "statut": "Disponible", "loyer_prevu": "1 900,00 $", "disponible": "", "pieces": "4 ½"}]}, {"adresse": "1169, 1169 du Grand-Pic, Laval (Québec) H7L 0K4", "unites": [{"appartement": "1169, Du Grand Pic", "bail": "3787", "locataire": "Celine Arulnadin, Logan Bounet", "telephone": "C : (438) 531-5026 / C : (438) 722-0545", "statut": "Disponible", "loyer_prevu": "2 380,00 $", "disponible": "", "pieces": "4 ½"}]}, {"adresse": "1171, 1171 du Grand-Pic, Laval (Québec) H7L 0K4", "unites": [{"appartement": "1171, Du Grand Pic", "bail": "", "locataire": "", "telephone": "", "statut": "Disponible", "loyer_prevu": "1 800,00 $", "disponible": "", "pieces": "4 ½"}, {"appartement": "Bail (482469)", "bail": "482469", "locataire": "", "telephone": "C : (514) 561-5629", "statut": "", "loyer_prevu": "", "disponible": "", "pieces": ""}]}, {"adresse": "1173, 1173 du Grand-Pic, Laval (Québec) H7L 0K4", "unites": [{"appartement": "1173, Du Grand Pic", "bail": "2759", "locataire": "Oudrhiri Mehdi", "telephone": "C : (514) 823-7155", "statut": "Disponible", "loyer_prevu": "1 855,00 $", "disponible": "", "pieces": "4 ½"}]}, {"adresse": "1175, 1175 du Grand-Pic, Laval (Québec) H7L 0K4", "unites": [{"appartement": "1175, Du Grand Pic", "bail": "465692", "locataire": "Elizabeth Dellaforesta", "telephone": "C : (514) 402-0021", "statut": "Disponible", "loyer_prevu": "2 380,00 $", "disponible": "", "pieces": "4 ½"}]}, {"adresse": "12339, 12339 Trefflé-Berthiaume, Montreal (Québec) H1C 0E4", "unites": [{"appartement": "12339, Trefflé-Berthiaume", "bail": "2620", "locataire": "Bertine Raymond", "telephone": "C : (514) 824-5695", "statut": "Disponible", "loyer_prevu": "1 690,00 $", "disponible": "", "pieces": "4 ½"}]}, {"adresse": "12349, 12349 Trefflé-Berthiaume, Montreal (Québec) H1C 0E4", "unites": [{"appartement": "12349, Trefflé-Berthiaume", "bail": "3717", "locataire": "Micheline Piché", "telephone": "C : (514) 435-8339", "statut": "Disponible", "loyer_prevu": "2 032,00 $", "disponible": "1 juil. 2026", "pieces": "5 ½"}]}, {"adresse": "132, 132 Campagnol, Terrebonne (Québec) J6V 0G2", "unites": [{"appartement": "103", "bail": "3514", "locataire": "Hind Guerraoui", "telephone": "C : (514) 918-2829", "statut": "Disponible", "loyer_prevu": "1 675,00 $", "disponible": "1 juil. 2026", "pieces": "4 ½"}, {"appartement": "201", "bail": "476251", "locataire": "Marc Lauzon", "telephone": "C : (514) 839-6793", "statut": "Disponible", "loyer_prevu": "1 335,00 $", "disponible": "1 juil. 2026", "pieces": "3 ½"}, {"appartement": "203", "bail": "2150", "locataire": "Pierre Beaulieu", "telephone": "C : (514) 710-8198", "statut": "Disponible", "loyer_prevu": "1 780,00 $", "disponible": "", "pieces": "4 ½"}]}, {"adresse": "13525, 13525 Place du Cantonnier, Mirabel (Québec) J7N 3K3", "unites": [{"appartement": "13525, Place du Cantonnier", "bail": "12345", "locataire": "Emilie Roy Desbiens", "telephone": "C : (450) 822-9882", "statut": "Disponible", "loyer_prevu": "1 360,00 $", "disponible": "", "pieces": "6 ½"}]}, {"adresse": "1360, 1360 du Grand-Pic, Laval (Québec) H7L 0L2", "unites": [{"appartement": "1360, Du Grand Pic", "bail": "464066", "locataire": "Wahib Semlali", "telephone": "C : (514) 467-2354", "statut": "Disponible", "loyer_prevu": "2 471,00 $", "disponible": "1 juil. 2026", "pieces": "4 ½"}]}, {"adresse": "1372, 1372 du Grand-Pic, Laval (Québec) H7L 0L2", "unites": [{"appartement": "1372, Du Grand Pic", "bail": "", "locataire": "", "telephone": "", "statut": "Disponible", "loyer_prevu": "1 900,00 $", "disponible": "", "pieces": "4 ½"}]}, {"adresse": "1378, 1378 du Grand-Pic, Laval (Québec) H7L 0L2", "unites": [{"appartement": "1378, Du Grand Pic", "bail": "2834", "locataire": "Louise Giroux", "telephone": "C : (450) 999-4910", "statut": "Disponible", "loyer_prevu": "1 936,00 $", "disponible": "1 juil. 2026", "pieces": "4 ½"}]}, {"adresse": "1450 MONTG, 1450 Montgolfier, Laval (Québec) H7T 0L6", "unites": [{"appartement": "210", "bail": "3509", "locataire": "Tony Christopher Acasandrei", "telephone": "C : (438) 828-9532", "statut": "Disponible", "loyer_prevu": "1 812,00 $", "disponible": "1 juil. 2026", "pieces": ""}, {"appartement": "311", "bail": "2146", "locataire": "Katalin Nagy", "telephone": "C : (514) 299-9801", "statut": "Disponible", "loyer_prevu": "1 387,00 $", "disponible": "1 juil. 2026", "pieces": ""}]}, {"adresse": "1452, 1452 du Grand-Pic, Laval (Québec) H7L 0L2", "unites": [{"appartement": "1452, Du Grand Pic", "bail": "4002", "locataire": "Chloé LAllemand-Lebrasseur", "telephone": "C : (514) 817-3189", "statut": "Disponible", "loyer_prevu": "1 830,00 $", "disponible": "", "pieces": ""}]}, {"adresse": "1456, 1456 du Grand-Pic, Laval (Québec) H7L 0L2", "unites": [{"appartement": "1456, du Grand-Pic", "bail": "465433", "locataire": "Meryem El Mahi, Mohamed Massoud", "telephone": "C : (514) 210-9186 / C : (514) 757-8019", "statut": "Disponible", "loyer_prevu": "1 855,00 $", "disponible": "1 juil. 2026", "pieces": "4 ½"}]}, {"adresse": "1458, 1458 du Grand-Pic, Laval (Québec) H7L 0L2", "unites": [{"appartement": "1458, Du Grand Pic", "bail": "4032", "locataire": "Caroline Pion", "telephone": "C : (514) 979-7735", "statut": "Disponible", "loyer_prevu": "1 880,00 $", "disponible": "1 avr. 2026", "pieces": ""}]}, {"adresse": "1471, 1471 de Ribeira- Grande, Laval (Québec) H7W 5N8", "unites": [{"appartement": "1471, Ribeira- Grande", "bail": "3932", "locataire": "Marina Phomséna", "telephone": "C : (514) 264-5183", "statut": "Disponible", "loyer_prevu": "1 300,00 $", "disponible": "1 juil. 2026", "pieces": ""}]}, {"adresse": "1473, 1473 De Ribeira- Grande, Laval (Québec) H7W 5N8", "unites": [{"appartement": "1473, Ribeira-Grande", "bail": "3810", "locataire": "Panorea Zaharatos", "telephone": "C : (514) 993-0953", "statut": "Disponible", "loyer_prevu": "1 715,00 $", "disponible": "1 juil. 2026", "pieces": "4 ½"}]}, {"adresse": "1475, 1475 de Ribeira- Grande, Laval (Québec) H7W 5N8", "unites": [{"appartement": "1475, Ribeira- Grande", "bail": "464069", "locataire": "Linda Bissonnette, Michel Percy", "telephone": "C : (450) 934-2122 / C : (450) 934-2122", "statut": "Disponible", "loyer_prevu": "1 160,00 $", "disponible": "1 juil. 2026", "pieces": ""}]}, {"adresse": "1535, 1535 du Grand-Pic, Laval (Québec) H7L 0K8", "unites": [{"appartement": "101", "bail": "", "locataire": "", "telephone": "", "statut": "Disponible", "loyer_prevu": "2 100,00 $", "disponible": "", "pieces": ""}, {"appartement": "103", "bail": "3334", "locataire": "Anna Gestions Immobilière", "telephone": "C : (514) 702-4004", "statut": "Disponible", "loyer_prevu": "2 196,00 $", "disponible": "1 juil. 2026", "pieces": ""}, {"appartement": "202", "bail": "3803", "locataire": "Laurie Coull", "telephone": "C : (438) 225-6687", "statut": "Disponible", "loyer_prevu": "2 068,00 $", "disponible": "1 juil. 2026", "pieces": ""}]}, {"adresse": "1555, 1555 du Grand-Pic, Laval (Québec) H7L 0K8", "unites": [{"appartement": "103", "bail": "3069", "locataire": "Arianne Cuillerier, Olivier Mayrand", "telephone": "C : (514) 887-9854 / C : (438) 351-5705", "statut": "Disponible", "loyer_prevu": "2 062,00 $", "disponible": "", "pieces": ""}, {"appartement": "302", "bail": "", "locataire": "", "telephone": "", "statut": "Disponible", "loyer_prevu": "2 400,00 $", "disponible": "", "pieces": ""}]}, {"adresse": "1585, 1585 du Grand-Pic, Laval (Québec) H7L 0K8", "unites": [{"appartement": "202", "bail": "3748", "locataire": "Fatou Binetou Ba", "telephone": "", "statut": "Disponible", "loyer_prevu": "2 500,00 $", "disponible": "1 juil. 2026", "pieces": ""}, {"appartement": "302", "bail": "", "locataire": "", "telephone": "", "statut": "Disponible", "loyer_prevu": "2 500,00 $", "disponible": "", "pieces": ""}]}, {"adresse": "1595, 1595 du Grand-Pic, Laval (Québec) H7L 0K8", "unites": [{"appartement": "101", "bail": "", "locataire": "", "telephone": "", "statut": "Disponible", "loyer_prevu": "2 100,00 $", "disponible": "", "pieces": ""}, {"appartement": "102", "bail": "3732", "locataire": "Rachida Boukhris", "telephone": "C : (263) 688-1212", "statut": "Disponible", "loyer_prevu": "1 655,00 $", "disponible": "", "pieces": ""}, {"appartement": "302", "bail": "", "locataire": "", "telephone": "", "statut": "Disponible", "loyer_prevu": "2 300,00 $", "disponible": "", "pieces": ""}]}, {"adresse": "161, 161 Saule-Noir, Terrebonne (Québec) J6V 0G3", "unites": [{"appartement": "106", "bail": "817", "locataire": "Denise Paradis-Côté", "telephone": "C : (514) 713-1687", "statut": "Disponible", "loyer_prevu": "1 470,00 $", "disponible": "", "pieces": "4 ½"}, {"appartement": "205", "bail": "464083", "locataire": "Elita Estiverne, Frensheska François", "telephone": "C : (514) 503-5338 / C : (438) 867-9801", "statut": "Disponible", "loyer_prevu": "1 736,00 $", "disponible": "1 juil. 2026", "pieces": "4 ½"}]}, {"adresse": "1655, 1655 du Grand-Pic, Laval (Québec) H7L 5T8", "unites": [{"appartement": "101", "bail": "2167", "locataire": "Jose Luis Yanez", "telephone": "C : (438) 407-5750", "statut": "Disponible", "loyer_prevu": "2 100,00 $", "disponible": "1 juil. 2026", "pieces": ""}, {"appartement": "102", "bail": "", "locataire": "", "telephone": "", "statut": "Facturé", "loyer_prevu": "1 650,00 $", "disponible": "1 juil. 2026", "pieces": ""}, {"appartement": "Bail (3709)", "bail": "3709", "locataire": "Jafaar Fneich", "telephone": "C : (514) 706-9684", "statut": "Disponible", "loyer_prevu": "", "disponible": "", "pieces": ""}, {"appartement": "201", "bail": "", "locataire": "Maria Karafotis", "telephone": "C : (514) 806-0102", "statut": "Disponible", "loyer_prevu": "2 400,00 $", "disponible": "", "pieces": ""}, {"appartement": "202", "bail": "2655", "locataire": "Martin De Grandpre", "telephone": "C : (514) 926-1562", "statut": "Disponible", "loyer_prevu": "2 400,00 $", "disponible": "1 juil. 2026", "pieces": ""}]}, {"adresse": "1745, 1745 Rue de Plaisance, Terrebonne (Québec) J6X 0K7", "unites": [{"appartement": "208", "bail": "484994", "locataire": "Marie-Josée Nantel", "telephone": "C : (514) 688-1340", "statut": "Disponible", "loyer_prevu": "2 573,00 $", "disponible": "1 juil. 2026", "pieces": "5 ½"}, {"appartement": "305", "bail": "485978", "locataire": "Kevin Pelletier", "telephone": "C : (438) 998-8838", "statut": "Disponible", "loyer_prevu": "1 612,00 $", "disponible": "1 juil. 2026", "pieces": "3 ½"}, {"appartement": "402", "bail": "504473", "locataire": "Dany Gauthier", "telephone": "", "statut": "Disponible", "loyer_prevu": "2 100,00 $", "disponible": "1 juil. 2026", "pieces": "4 ½"}, {"appartement": "403", "bail": "486006", "locataire": "Josée Girard", "telephone": "C : (514) 622-0132", "statut": "Disponible", "loyer_prevu": "2 468,00 $", "disponible": "1 juil. 2026", "pieces": "4 ½"}, {"appartement": "404", "bail": "486008", "locataire": "Maher Belouahchia", "telephone": "C : 514 554 5488", "statut": "Disponible", "loyer_prevu": "1 725,00 $", "disponible": "1 juil. 2026", "pieces": "3 ½"}]}, {"adresse": "2095-202, 2095 Papineau, Montréal (Québec) H2K 4J5", "unites": [{"appartement": "202", "bail": "", "locataire": "", "telephone": "", "statut": "Disponible", "loyer_prevu": "", "disponible": "", "pieces": ""}]}, {"adresse": "2095-301, 2095 Papineau, Montréal (Québec) H2K 4J5", "unites": [{"appartement": "301", "bail": "2539", "locataire": "Arame M'baye", "telephone": "", "statut": "Disponible", "loyer_prevu": "1 750,00 $", "disponible": "1 juil. 2026", "pieces": ""}]}, {"adresse": "2095-306, 2095 Papineau, Montréal (Québec) H2K 4J5", "unites": [{"appartement": "306", "bail": "4014", "locataire": "Mélissa Urban", "telephone": "C : (438) 809-7266", "statut": "Disponible", "loyer_prevu": "1 535,00 $", "disponible": "", "pieces": ""}]}, {"adresse": "2290, 2290 de la Jonquille, Terrebonne (Québec) J7M 2G5", "unites": [{"appartement": "301", "bail": "", "locataire": "", "telephone": "", "statut": "Facturé", "loyer_prevu": "0,00 $", "disponible": "1 juil. 2026", "pieces": "4 ½"}, {"appartement": "Bail (2087)", "bail": "2087", "locataire": "Christophe Desprez", "telephone": "C : (438) 777-3617", "statut": "Disponible", "loyer_prevu": "", "disponible": "", "pieces": ""}]}, {"adresse": "2303 DORIO, 2303 Dorion, Montreal (Québec) H2K 4B5", "unites": [{"appartement": "2303, Dorion", "bail": "", "locataire": "", "telephone": "", "statut": "Disponible", "loyer_prevu": "1 350,00 $", "disponible": "", "pieces": "3 ½"}]}, {"adresse": "2330, 2330 de la Jonquille, Terrebonne (Québec) J7M 2G5", "unites": [{"appartement": "301", "bail": "", "locataire": "", "telephone": "", "statut": "Disponible", "loyer_prevu": "1 060,00 $", "disponible": "", "pieces": "4 ½"}]}, {"adresse": "2350, 2350 de la Jonquille, Terrebonne (Québec) J7M 2G5", "unites": [{"appartement": "403", "bail": "", "locataire": "", "telephone": "", "statut": "Facturé", "loyer_prevu": "1 465,00 $", "disponible": "1 juil. 2026", "pieces": "4 ½"}, {"appartement": "Bail (4042)", "bail": "4042", "locataire": "Megan Lefebvre Monette, Mylène Surprenant", "telephone": "C : (450) 530-4004 / C : (514) 952-0302", "statut": "Disponible", "loyer_prevu": "", "disponible": "", "pieces": ""}]}, {"adresse": "257, 257 Montée Sanche, Boisbriand (Québec) J7G 2E1", "unites": [{"appartement": "201", "bail": "3955", "locataire": "Elie Abou Khalil", "telephone": "C : (514) 241-6586", "statut": "Disponible", "loyer_prevu": "2 030,00 $", "disponible": "1 juil. 2026", "pieces": "4 ½"}, {"appartement": "202", "bail": "465677", "locataire": "Sylvia Guterres", "telephone": "C : 5145862885", "statut": "Disponible", "loyer_prevu": "2 050,00 $", "disponible": "1 juil. 2026", "pieces": "4 ½"}]}, {"adresse": "269 ANGE, 269 Angèle-Chartrand, Laval (Québec) H7H 1N9", "unites": [{"appartement": "269, Angèle-Chartrand", "bail": "", "locataire": "", "telephone": "", "statut": "Disponible", "loyer_prevu": "2 150,00 $", "disponible": "", "pieces": "4 ½"}]}, {"adresse": "282 ANGE, 282 Angèle-Chartrand, Laval (Québec) H7H 0B8", "unites": [{"appartement": "282, Angèle-Chartrand", "bail": "", "locataire": "", "telephone": "", "statut": "Disponible", "loyer_prevu": "2 100,00 $", "disponible": "", "pieces": "4 ½"}]}, {"adresse": "289 ANGE, 289 Angèle-Chartrand, Laval (Québec) H7H 1N9", "unites": [{"appartement": "289, Angèle-Chartrand", "bail": "3967", "locataire": "Nadra Agrebi", "telephone": "C : (514) 944-7898", "statut": "Disponible", "loyer_prevu": "2 060,00 $", "disponible": "1 juil. 2026", "pieces": "4 ½"}]}, {"adresse": "290-B ANGE, 290 Angèle-Chartrand, Laval (Québec) H9H 0B8", "unites": [{"appartement": "B", "bail": "3092", "locataire": "Antonio Caruso, Nadia D'Ippolito", "telephone": "C : (514) 966-7883 / C : (514) 570-0278", "statut": "Disponible", "loyer_prevu": "2 345,00 $", "disponible": "1 juil. 2026", "pieces": "4 ½"}]}, {"adresse": "3187, 3187 Dali, Laval (Québec) H7E 0G7", "unites": [{"appartement": "1", "bail": "239", "locataire": "Guy Saad", "telephone": "C : (514) 892-8008", "statut": "Disponible", "loyer_prevu": "1 745,00 $", "disponible": "", "pieces": "5 ½"}]}, {"adresse": "3189, 3189 Dali, Laval (Québec) H7E 0G7", "unites": [{"appartement": "1", "bail": "222", "locataire": "Martin Lalonde", "telephone": "C : (450) 374-0955", "statut": "Disponible", "loyer_prevu": "1 115,00 $", "disponible": "1 juil. 2026", "pieces": "3 ½"}]}, {"adresse": "322 ANGE, 322 Angèle-Chartrand, Laval (Québec) H7H 0B8", "unites": [{"appartement": "322, Angèle-Chartrand", "bail": "", "locataire": "", "telephone": "", "statut": "Disponible", "loyer_prevu": "2 200,00 $", "disponible": "", "pieces": "4 ½"}]}, {"adresse": "328-A ANGE, 328 Angèle-Chartrand, Laval (Québec) H7H 0B8", "unites": [{"appartement": "A", "bail": "3385", "locataire": "Sonia Ribeiro Ferraria", "telephone": "C : (514) 690-5367", "statut": "Disponible", "loyer_prevu": "2 270,00 $", "disponible": "1 juil. 2026", "pieces": "4 ½"}]}, {"adresse": "379, 379 Des Mélèzes, Rosemère (Québec) J7A 0B1", "unites": [{"appartement": "302", "bail": "", "locataire": "", "telephone": "", "statut": "Disponible", "loyer_prevu": "2 100,00 $", "disponible": "", "pieces": "4 ½"}, {"appartement": "303", "bail": "", "locataire": "", "telephone": "", "statut": "Disponible", "loyer_prevu": "1 777,00 $", "disponible": "", "pieces": "3 ½"}]}, {"adresse": "383, 383 Des Mélezes, Rosemère (Québec) J7A 0B1", "unites": [{"appartement": "303", "bail": "3774", "locataire": "Béluga Construction", "telephone": "C : (450) 818-4020", "statut": "Disponible", "loyer_prevu": "2 205,00 $", "disponible": "", "pieces": "3 ½"}]}, {"adresse": "387, 387 Des Mélezes, Rosemère (Québec) J7A 0B1", "unites": [{"appartement": "203", "bail": "4058", "locataire": "Mathilde Monette", "telephone": "C : (450) 848-7929", "statut": "Disponible", "loyer_prevu": "1 825,00 $", "disponible": "1 juil. 2026", "pieces": "3 ½"}, {"appartement": "304", "bail": "3181", "locataire": "Alexandre Belisle", "telephone": "C : (514) 296-9763", "statut": "Disponible", "loyer_prevu": "2 175,00 $", "disponible": "1 juil. 2026", "pieces": "5 ½"}]}, {"adresse": "489, 489 Vérone, Terrebonne (Québec) J6W 5K7", "unites": [{"appartement": "6", "bail": "2070", "locataire": "Raymond Roy", "telephone": "C : (514) 603-1201", "statut": "Disponible", "loyer_prevu": "1 012,00 $", "disponible": "1 juil. 2026", "pieces": "4 ½"}]}, {"adresse": "4931, 4931 Bélanger, Montréal (Québec) H1T 1C4", "unites": [{"appartement": "2", "bail": "1018", "locataire": "Isabelle Lebron", "telephone": "C : (438) 346-8620", "statut": "Disponible", "loyer_prevu": "825,00 $", "disponible": "", "pieces": ""}, {"appartement": "4", "bail": "3313", "locataire": "Jocelyne Teresa Gomez Torres", "telephone": "C : (438) 282-5319", "statut": "Disponible", "loyer_prevu": "1 375,00 $", "disponible": "", "pieces": ""}, {"appartement": "6", "bail": "1017", "locataire": "Jorge Munoz", "telephone": "C : (514) 729-5376", "statut": "Disponible", "loyer_prevu": "616,00 $", "disponible": "", "pieces": ""}]}, {"adresse": "499, 499 Vérone, Terrebonne (Québec) J6W 5K8", "unites": [{"appartement": "3", "bail": "3033", "locataire": "Noemie Martel", "telephone": "C : (438) 874-8744", "statut": "Disponible", "loyer_prevu": "1 109,00 $", "disponible": "1 juil. 2026", "pieces": "4 ½"}]}, {"adresse": "509, 509 Vérone, Terrebonne (Québec) J6W 5L2", "unites": [{"appartement": "1", "bail": "2078", "locataire": "Gina Fernanda, Kevin Pineault", "telephone": "C : 5147915596 / C : (514) 475-7621", "statut": "Disponible", "loyer_prevu": "1 025,00 $", "disponible": "1 juil. 2026", "pieces": "4 ½"}]}, {"adresse": "60, 60 Picard, Charlemagne (Québec) J5Z 1V1", "unites": [{"appartement": "1", "bail": "473899", "locataire": "Alexis Bélanger, Angelyna Denuziere", "telephone": "C : 4388828103 / C : 5148303554", "statut": "Disponible", "loyer_prevu": "1 630,00 $", "disponible": "1 juil. 2026", "pieces": "4 ½"}, {"appartement": "8", "bail": "2326", "locataire": "Marie Pier Boisvert", "telephone": "C : (514) 641-1629", "statut": "Disponible", "loyer_prevu": "1 625,00 $", "disponible": "1 juil. 2026", "pieces": "4 ½"}]}, {"adresse": "64-B, 64 Principale, Laval (Québec) H7X 0C7", "unites": [{"appartement": "B", "bail": "3993", "locataire": "Linda Corrente", "telephone": "C : (514) 518-2400", "statut": "Disponible", "loyer_prevu": "1 665,00 $", "disponible": "1 juil. 2026", "pieces": ""}]}, {"adresse": "69 CAMPAG, 69 Campagnol, Lachenaie (Québec) J6V 0H9", "unites": [{"appartement": "69, Campagnol", "bail": "464147", "locataire": "Marina Bouchard, Nathalie Duguay", "telephone": "C : (514) 691-3678 / C : (514) 237-6543", "statut": "Disponible", "loyer_prevu": "1 845,00 $", "disponible": "1 juil. 2026", "pieces": "5 ½"}]}, {"adresse": "699, 699 Peladeau, Laval (Québec) H7K 0E2", "unites": [{"appartement": "699, Péladeau", "bail": "3867", "locataire": "Garo Malakhanian", "telephone": "C : (438) 885-0232", "statut": "Disponible", "loyer_prevu": "1 913,00 $", "disponible": "1 juil. 2026", "pieces": ""}]}, {"adresse": "72, 72 Principale, Laval (Québec) H7X 0C7", "unites": [{"appartement": "A", "bail": "2915", "locataire": "Gestions Immobilière Anna", "telephone": "C : (514) 702-4004", "statut": "Disponible", "loyer_prevu": "1 891,00 $", "disponible": "1 juil. 2026", "pieces": ""}]}, {"adresse": "75 CAMPAG, 75 Campagnol, Lachenaie (Québec) J6V 0H9", "unites": [{"appartement": "75, Campagnol", "bail": "2147", "locataire": "Sophie Robichaud", "telephone": "C : (514) 830-0458", "statut": "Disponible", "loyer_prevu": "1 856,00 $", "disponible": "1 juil. 2026", "pieces": "4 ½"}]}, {"adresse": "756 MONT-L, 756 Mont-Laval, Laval (Québec) H7X 0G2", "unites": [{"appartement": "756, Mont-Laval", "bail": "", "locataire": "", "telephone": "", "statut": "Facturé", "loyer_prevu": "1 995,00 $", "disponible": "1 juil. 2026", "pieces": "4 ½"}, {"appartement": "Bail (2829)", "bail": "2829", "locataire": "Pamela Lagunas", "telephone": "C : (514) 863-2967", "statut": "Disponible", "loyer_prevu": "", "disponible": "", "pieces": ""}]}, {"adresse": "760 MONT-L, 760 Mont-Laval, Laval (Québec) H7X 0G2", "unites": [{"appartement": "760, Mont-Laval", "bail": "457102", "locataire": "Patrick Des Rochers", "telephone": "C : (438) 502-0466", "statut": "Disponible", "loyer_prevu": "2 080,00 $", "disponible": "", "pieces": "4 ½"}]}, {"adresse": "764 MONT-L, 764 Mont-Laval, Laval (Québec) H7X 0G2", "unites": [{"appartement": "764, Mont-Laval", "bail": "2621", "locataire": "Carolyne Brien", "telephone": "C : (514) 607-2000", "statut": "Disponible", "loyer_prevu": "1 425,00 $", "disponible": "1 juil. 2026", "pieces": "3 ½"}]}, {"adresse": "768 MONT-L, 768 Mont-Laval, Laval (Québec) H7X 0G2", "unites": [{"appartement": "1", "bail": "", "locataire": "", "telephone": "", "statut": "Disponible", "loyer_prevu": "1 905,00 $", "disponible": "", "pieces": "4 ½"}]}, {"adresse": "788 MONT-L, 788 Mont-Laval, Laval (Québec) H7X 0G2", "unites": [{"appartement": "788, Mont-Laval", "bail": "", "locataire": "", "telephone": "", "statut": "Disponible", "loyer_prevu": "1 930,00 $", "disponible": "", "pieces": "4 ½"}]}, {"adresse": "815 CROISS, 815 Croissant des Roselins, Laval (Québec) H7L 0K5", "unites": [{"appartement": "815, Croissant des Roselins", "bail": "3599", "locataire": "Jean-Yves Paquin", "telephone": "C : (438) 390-8726", "statut": "Disponible", "loyer_prevu": "2 375,00 $", "disponible": "", "pieces": "4 ½"}]}, {"adresse": "835 CROISS, 835 Croissant des Roselins, Laval (Québec) H7L 0K5", "unites": [{"appartement": "835, Croissant des Roselins", "bail": "3537", "locataire": "Lana Ibrahim", "telephone": "C : (514) 515-8104", "statut": "Disponible", "loyer_prevu": "2 200,00 $", "disponible": "1 avr. 2026", "pieces": "4 ½"}]}, {"adresse": "837 CROISS, 837 Croissant des Roselins, Laval (Québec) H7L 0K5", "unites": [{"appartement": "837, Croissant des Roselins", "bail": "", "locataire": "", "telephone": "", "statut": "Disponible", "loyer_prevu": "1 800,00 $", "disponible": "", "pieces": "4 ½"}]}, {"adresse": "839 CROISS, 839 Croissant des Roselins, Laval (Québec) H7L 0K5", "unites": [{"appartement": "839, Croissant des Roselins", "bail": "", "locataire": "", "telephone": "", "statut": "Disponible", "loyer_prevu": "1 750,00 $", "disponible": "", "pieces": "4 ½"}]}, {"adresse": "861 CROISS, 861 Croissant des Roselins, Laval (Québec) H7L 0K5", "unites": [{"appartement": "202", "bail": "4020", "locataire": "Youssef Belmadani, Zineb Nakri", "telephone": "C : (613) 296-6660 / C : (613) 250-8937", "statut": "Disponible", "loyer_prevu": "2 435,00 $", "disponible": "1 avr. 2026", "pieces": "5 ½"}]}, {"adresse": "871 CROISS, 871 Croissant des Roselins, Laval (Québec) H7L 0K5", "unites": [{"appartement": "101", "bail": "3780", "locataire": "Marie-Julie Trudel, Pierre-Olivier Desjardins", "telephone": "C : (438) 868-1951 / C : (450) 626-1951", "statut": "Disponible", "loyer_prevu": "2 165,00 $", "disponible": "1 juil. 2026", "pieces": "4 ½"}, {"appartement": "103", "bail": "3876", "locataire": "Michel Besilis", "telephone": "", "statut": "Disponible", "loyer_prevu": "1 775,00 $", "disponible": "", "pieces": "4 ½"}]}, {"adresse": "881 CROISS, 881 Croissant des Roselins, Laval (Québec) H7L 5T8", "unites": [{"appartement": "103", "bail": "", "locataire": "", "telephone": "", "statut": "Disponible", "loyer_prevu": "2 000,00 $", "disponible": "", "pieces": "4 ½"}, {"appartement": "201", "bail": "465386", "locataire": "Noor Abou El-Oon, Walid Maarabani", "telephone": "C : (514) 692-5041", "statut": "Disponible", "loyer_prevu": "2 200,00 $", "disponible": "", "pieces": "5 ½"}, {"appartement": "202", "bail": "3753", "locataire": "Lyne Loiselle, Sylvain Grégoire", "telephone": "C : (514) 945-9465 / C : (514) 862-6750", "statut": "Disponible", "loyer_prevu": "2 650,00 $", "disponible": "", "pieces": "5 ½"}]}, {"adresse": "881 TOUPIN, 881 Toupin, L'Assomption (Québec) J5W 0B3", "unites": [{"appartement": "881, Toupin", "bail": "3785", "locataire": "Chad Brien Cloutier", "telephone": "C : (819) 350-1935", "statut": "Disponible", "loyer_prevu": "1 005,00 $", "disponible": "", "pieces": "4 ½"}]}, {"adresse": "88-516, 88 Rue Gary-Carter, Montréal (Québec) H2R 0B3", "unites": [{"appartement": "516", "bail": "3755", "locataire": "Gabriel-Rodrigo Trigueros-Corbo", "telephone": "C : (514) 299-1112", "statut": "Disponible", "loyer_prevu": "1 555,00 $", "disponible": "1 juil. 2026", "pieces": ""}]}, {"adresse": "90 POM, 90 du Pomérol, Boisbriand (Québec) J7G 3J7", "unites": [{"appartement": "304", "bail": "3905", "locataire": "Simon Codere", "telephone": "C : (514) 258-8159", "statut": "Disponible", "loyer_prevu": "1 970,00 $", "disponible": "", "pieces": "4 ½"}]}, {"adresse": "F1-STAT, 687 Péladeau, Laval (Québec) J1J 1J1", "unites": [{"appartement": "530", "bail": "", "locataire": "", "telephone": "", "statut": "Disponible", "loyer_prevu": "275,00 $", "disponible": "", "pieces": ""}]}];
-
 let accessToken = null;
 
-// ── AUTH ────────────────────────────────────────────────
-function connecterGoogle() {
-  const btn = document.getElementById('btn-auth');
-  btn.disabled = true;
-  document.getElementById('auth-text').textContent = 'Ouverture...';
+const BUILDINGS = [{"adresse": "100 POM, 100 du Pomérol, Boisbriand (Québec) J7G 3J7", "agents": ["Josée"], "rue": "100 du Pomérol, Boisbriand", "unites": [{"appartement": "302", "bail": "2735", "locataire": "Annie Thibodeau, Marcel Roiati", "telephone": "C : (514) 994-3123 / C : (514) 862-5654", "loyer_prevu": "2 150,00 $", "disponible": "1 juil. 2026", "pieces": "4 ½"}]}, {"adresse": "1001 MONT-, 1001 Mont-Laval, Laval (Québec) H7X 0G3", "agents": ["Myriam"], "rue": "1001 Mont-Laval, Laval", "unites": [{"appartement": "214", "bail": "2487", "locataire": "Benoit Walsh, Lorraine Mercure", "telephone": "C : (514) 793-1242 / C : (450) 758-7552", "loyer_prevu": "2 190,00 $", "disponible": "1 juil. 2026", "pieces": "4 ½"}, {"appartement": "303", "bail": "", "locataire": "", "telephone": "", "loyer_prevu": "2 255,00 $", "disponible": "1 juil. 2026", "pieces": "4 ½"}, {"appartement": "Bail (2447)", "bail": "2447", "locataire": "Pierre Gravel", "telephone": "C : (450) 689-4294", "loyer_prevu": "", "disponible": "", "pieces": ""}, {"appartement": "316", "bail": "3149", "locataire": "Erika Lalumiere Laflamme", "telephone": "C : (450) 578-6505", "loyer_prevu": "1 880,00 $", "disponible": "1 juil. 2026", "pieces": "3 ½"}]}, {"adresse": "108, 108 Doré-Jaune, Terrebonne (Québec) J6V 0E5", "agents": ["Maria", "Janie"], "rue": "108 Doré-Jaune, Terrebonne", "unites": [{"appartement": "112", "bail": "3875", "locataire": "Josée Lagacé", "telephone": "C : (514) 703-5589", "loyer_prevu": "1 480,00 $", "disponible": "1 juil. 2026", "pieces": "3 ½"}, {"appartement": "114", "bail": "3574", "locataire": "Johannie Lamothe", "telephone": "C : (514) 883-9264", "loyer_prevu": "1 500,00 $", "disponible": "1 juil. 2026", "pieces": "3 ½"}, {"appartement": "201", "bail": "2561", "locataire": "Line Servant", "telephone": "C : (438) 503-1507", "loyer_prevu": "2 095,00 $", "disponible": "", "pieces": "5 ½"}, {"appartement": "208", "bail": "1594", "locataire": "Guy Perreault, Sylvie Gauthier", "telephone": "C : (514) 606-0650 / C : (514) 219-8345", "loyer_prevu": "1 965,00 $", "disponible": "1 juil. 2026", "pieces": "4 ½"}, {"appartement": "211", "bail": "1789", "locataire": "Diane Frenette, Robert Leveille", "telephone": "C : (514) 356-3772 / C : (514) 386-4964", "loyer_prevu": "1 960,00 $", "disponible": "1 juil. 2026", "pieces": "4 ½"}, {"appartement": "212", "bail": "1766", "locataire": "Stephanie Plante", "telephone": "C : (514) 773-2762", "loyer_prevu": "1 480,00 $", "disponible": "1 juil. 2026", "pieces": "3 ½"}, {"appartement": "303", "bail": "464060", "locataire": "Rabelais Eldor, Stacy Girard", "telephone": "C : (514) 973-1452 / C : (514) 706-6672", "loyer_prevu": "1 590,00 $", "disponible": "1 juil. 2026", "pieces": "3 ½"}, {"appartement": "304", "bail": "465681", "locataire": "Karianne Baron", "telephone": "C : (438) 988-0366", "loyer_prevu": "1 875,00 $", "disponible": "1 juil. 2026", "pieces": "4 ½"}, {"appartement": "311", "bail": "1790", "locataire": "Benoit Gagne, Sylvie Fafard", "telephone": "C : (450) 821-5801 / C : (438) 985-1462", "loyer_prevu": "2 070,00 $", "disponible": "1 juil. 2026", "pieces": "4 ½"}]}, {"adresse": "1100, 1100 du Grand-Pic, Laval (Québec) H7L 0K3", "agents": ["Janie", "Isabelle"], "rue": "1100 du Grand-Pic, Laval", "unites": [{"appartement": "1100, Du Grand Pic", "bail": "3610", "locataire": "Sidavinn Kong", "telephone": "C : (514) 623-4919", "loyer_prevu": "1 730,00 $", "disponible": "1 juil. 2026", "pieces": "4 ½"}]}, {"adresse": "1102, 1102 du Grand-Pic, Laval (Québec) H7L 0K3", "agents": ["Janie", "Isabelle"], "rue": "1102 du Grand-Pic, Laval", "unites": [{"appartement": "1102, Du Grand Pic", "bail": "1444", "locataire": "Amelie Talbot", "telephone": "C : (514) 865-1793", "loyer_prevu": "1 920,00 $", "disponible": "1 juil. 2026", "pieces": "4 ½"}]}, {"adresse": "1104, 1104 du Grand-Pic, Laval (Québec) H7L 0K3", "agents": ["Janie", "Isabelle"], "rue": "1104 du Grand-Pic, Laval", "unites": [{"appartement": "1104, Du Grand-Pic", "bail": "3715", "locataire": "Gabrielle Rizzi", "telephone": "C : (438) 881-5573", "loyer_prevu": "2 440,00 $", "disponible": "1 juil. 2026", "pieces": "4 ½"}]}, {"adresse": "1110, 1110 du Grand-Pic, Laval (Québec) H7L 0K3", "agents": ["Janie", "Isabelle"], "rue": "1110 du Grand-Pic, Laval", "unites": [{"appartement": "1110, Du Grand Pic", "bail": "2378", "locataire": "Steve Douyon", "telephone": "C : (450) 963-5430", "loyer_prevu": "2 350,00 $", "disponible": "1 juil. 2026", "pieces": "4 ½"}]}, {"adresse": "1146, 1146 du Grand-Pic, Laval (Québec) H7L 0K3", "agents": ["Janie", "Isabelle"], "rue": "1146 du Grand-Pic, Laval", "unites": [{"appartement": "1146, Du Grand Pic", "bail": "", "locataire": "", "telephone": "", "loyer_prevu": "1 855,00 $", "disponible": "1 juil. 2026", "pieces": "4 ½"}, {"appartement": "Bail (3983)", "bail": "3983", "locataire": "", "telephone": "C : (514) 980-1301", "loyer_prevu": "", "disponible": "", "pieces": ""}]}, {"adresse": "116, 116 Campagnol, Lachenaie (Québec) J6V 0G2", "agents": ["Maria", "Janie"], "rue": "116 Campagnol, Lachenaie", "unites": [{"appartement": "103", "bail": "3180", "locataire": "Tommy Malenfant", "telephone": "C : (514) 912-9579", "loyer_prevu": "1 650,00 $", "disponible": "1 juil. 2026", "pieces": "4 ½"}, {"appartement": "105", "bail": "464064", "locataire": "Simon Racicot", "telephone": "C : (514) 715-2586", "loyer_prevu": "1 315,00 $", "disponible": "1 juil. 2026", "pieces": "3 ½"}, {"appartement": "106", "bail": "3175", "locataire": "Nathalie Ndema", "telephone": "C : (437) 333-2733", "loyer_prevu": "1 760,00 $", "disponible": "1 juil. 2026", "pieces": "5 ½"}, {"appartement": "301", "bail": "3910", "locataire": "Coralie Chevrette-Séguin", "telephone": "C : (438) 728-5556", "loyer_prevu": "1 325,00 $", "disponible": "1 avr. 2026", "pieces": "3 ½"}]}, {"adresse": "1165, 1165 du Grand-Pic, Laval (Québec) H7L 0K4", "agents": ["Janie", "Isabelle"], "rue": "1165 du Grand-Pic, Laval", "unites": [{"appartement": "1165, Du Grand Pic", "bail": "", "locataire": "", "telephone": "", "loyer_prevu": "1 830,00 $", "disponible": "", "pieces": "4 ½"}, {"appartement": "Bail (487081)", "bail": "487081", "locataire": "Patricia Tremblay", "telephone": "C : (514) 712-2768", "loyer_prevu": "", "disponible": "", "pieces": ""}]}, {"adresse": "1167, 1167 du Grand-Pic, Laval (Québec) H7L 0K4", "agents": ["Janie", "Isabelle"], "rue": "1167 du Grand-Pic, Laval", "unites": [{"appartement": "1167, Du Grand Pic", "bail": "3722", "locataire": "Graziella Natalizio, Samantha Sanon", "telephone": "C : (438) 395-2515 / C : (438) 322-5020", "loyer_prevu": "1 900,00 $", "disponible": "", "pieces": "4 ½"}]}, {"adresse": "1169, 1169 du Grand-Pic, Laval (Québec) H7L 0K4", "agents": ["Janie", "Isabelle"], "rue": "1169 du Grand-Pic, Laval", "unites": [{"appartement": "1169, Du Grand Pic", "bail": "3787", "locataire": "Celine Arulnadin, Logan Bounet", "telephone": "C : (438) 531-5026 / C : (438) 722-0545", "loyer_prevu": "2 380,00 $", "disponible": "", "pieces": "4 ½"}]}, {"adresse": "1171, 1171 du Grand-Pic, Laval (Québec) H7L 0K4", "agents": ["Janie", "Isabelle"], "rue": "1171 du Grand-Pic, Laval", "unites": [{"appartement": "1171, Du Grand Pic", "bail": "", "locataire": "", "telephone": "", "loyer_prevu": "1 800,00 $", "disponible": "", "pieces": "4 ½"}, {"appartement": "Bail (482469)", "bail": "482469", "locataire": "", "telephone": "C : (514) 561-5629", "loyer_prevu": "", "disponible": "", "pieces": ""}]}, {"adresse": "1173, 1173 du Grand-Pic, Laval (Québec) H7L 0K4", "agents": ["Janie", "Isabelle"], "rue": "1173 du Grand-Pic, Laval", "unites": [{"appartement": "1173, Du Grand Pic", "bail": "2759", "locataire": "Oudrhiri Mehdi", "telephone": "C : (514) 823-7155", "loyer_prevu": "1 855,00 $", "disponible": "", "pieces": "4 ½"}]}, {"adresse": "1175, 1175 du Grand-Pic, Laval (Québec) H7L 0K4", "agents": ["Janie", "Isabelle"], "rue": "1175 du Grand-Pic, Laval", "unites": [{"appartement": "1175, Du Grand Pic", "bail": "465692", "locataire": "Elizabeth Dellaforesta", "telephone": "C : (514) 402-0021", "loyer_prevu": "2 380,00 $", "disponible": "", "pieces": "4 ½"}]}, {"adresse": "12339, 12339 Trefflé-Berthiaume, Montreal (Québec) H1C 0E4", "agents": ["Maria"], "rue": "12339 Trefflé-Berthiaume, Montreal", "unites": [{"appartement": "12339, Trefflé-Berthiaume", "bail": "2620", "locataire": "Bertine Raymond", "telephone": "C : (514) 824-5695", "loyer_prevu": "1 690,00 $", "disponible": "", "pieces": "4 ½"}]}, {"adresse": "12349, 12349 Trefflé-Berthiaume, Montreal (Québec) H1C 0E4", "agents": ["Maria"], "rue": "12349 Trefflé-Berthiaume, Montreal", "unites": [{"appartement": "12349, Trefflé-Berthiaume", "bail": "3717", "locataire": "Micheline Piché", "telephone": "C : (514) 435-8339", "loyer_prevu": "2 032,00 $", "disponible": "1 juil. 2026", "pieces": "5 ½"}]}, {"adresse": "132, 132 Campagnol, Terrebonne (Québec) J6V 0G2", "agents": ["Maria", "Isabelle"], "rue": "132 Campagnol, Terrebonne", "unites": [{"appartement": "103", "bail": "3514", "locataire": "Hind Guerraoui", "telephone": "C : (514) 918-2829", "loyer_prevu": "1 675,00 $", "disponible": "1 juil. 2026", "pieces": "4 ½"}, {"appartement": "201", "bail": "476251", "locataire": "Marc Lauzon", "telephone": "C : (514) 839-6793", "loyer_prevu": "1 335,00 $", "disponible": "1 juil. 2026", "pieces": "3 ½"}, {"appartement": "203", "bail": "2150", "locataire": "Pierre Beaulieu", "telephone": "C : (514) 710-8198", "loyer_prevu": "1 780,00 $", "disponible": "", "pieces": "4 ½"}]}, {"adresse": "13525, 13525 Place du Cantonnier, Mirabel (Québec) J7N 3K3", "agents": ["Repris par le proprio"], "rue": "13525 Place du Cantonnier, Mirabel", "unites": [{"appartement": "13525, Place du Cantonnier", "bail": "12345", "locataire": "Emilie Roy Desbiens", "telephone": "C : (450) 822-9882", "loyer_prevu": "1 360,00 $", "disponible": "", "pieces": "6 ½"}]}, {"adresse": "1360, 1360 du Grand-Pic, Laval (Québec) H7L 0L2", "agents": ["Janie", "Isabelle"], "rue": "1360 du Grand-Pic, Laval", "unites": [{"appartement": "1360, Du Grand Pic", "bail": "464066", "locataire": "Wahib Semlali", "telephone": "C : (514) 467-2354", "loyer_prevu": "2 471,00 $", "disponible": "1 juil. 2026", "pieces": "4 ½"}]}, {"adresse": "1372, 1372 du Grand-Pic, Laval (Québec) H7L 0L2", "agents": ["Janie", "Isabelle"], "rue": "1372 du Grand-Pic, Laval", "unites": [{"appartement": "1372, Du Grand Pic", "bail": "", "locataire": "", "telephone": "", "loyer_prevu": "1 900,00 $", "disponible": "", "pieces": "4 ½"}]}, {"adresse": "1378, 1378 du Grand-Pic, Laval (Québec) H7L 0L2", "agents": ["Janie", "Isabelle"], "rue": "1378 du Grand-Pic, Laval", "unites": [{"appartement": "1378, Du Grand Pic", "bail": "2834", "locataire": "Louise Giroux", "telephone": "C : (450) 999-4910", "loyer_prevu": "1 936,00 $", "disponible": "1 juil. 2026", "pieces": "4 ½"}]}, {"adresse": "1450 MONTG, 1450 Montgolfier, Laval (Québec) H7T 0L6", "agents": ["Janie"], "rue": "1450 Montgolfier, Laval", "unites": [{"appartement": "210", "bail": "3509", "locataire": "Tony Christopher Acasandrei", "telephone": "C : (438) 828-9532", "loyer_prevu": "1 812,00 $", "disponible": "1 juil. 2026", "pieces": ""}, {"appartement": "311", "bail": "2146", "locataire": "Katalin Nagy", "telephone": "C : (514) 299-9801", "loyer_prevu": "1 387,00 $", "disponible": "1 juil. 2026", "pieces": ""}]}, {"adresse": "1452, 1452 du Grand-Pic, Laval (Québec) H7L 0L2", "agents": ["Janie", "Isabelle"], "rue": "1452 du Grand-Pic, Laval", "unites": [{"appartement": "1452, Du Grand Pic", "bail": "4002", "locataire": "Chloé LAllemand-Lebrasseur", "telephone": "C : (514) 817-3189", "loyer_prevu": "1 830,00 $", "disponible": "", "pieces": ""}]}, {"adresse": "1456, 1456 du Grand-Pic, Laval (Québec) H7L 0L2", "agents": ["Janie", "Isabelle"], "rue": "1456 du Grand-Pic, Laval", "unites": [{"appartement": "1456, du Grand-Pic", "bail": "465433", "locataire": "Meryem El Mahi, Mohamed Massoud", "telephone": "C : (514) 210-9186 / C : (514) 757-8019", "loyer_prevu": "1 855,00 $", "disponible": "1 juil. 2026", "pieces": "4 ½"}]}, {"adresse": "1458, 1458 du Grand-Pic, Laval (Québec) H7L 0L2", "agents": ["Janie", "Isabelle"], "rue": "1458 du Grand-Pic, Laval", "unites": [{"appartement": "1458, Du Grand Pic", "bail": "4032", "locataire": "Caroline Pion", "telephone": "C : (514) 979-7735", "loyer_prevu": "1 880,00 $", "disponible": "1 avr. 2026", "pieces": ""}]}, {"adresse": "1471, 1471 de Ribeira- Grande, Laval (Québec) H7W 5N8", "agents": ["Repris par le proprio"], "rue": "1471 de Ribeira- Grande, Laval", "unites": [{"appartement": "1471, Ribeira- Grande", "bail": "3932", "locataire": "Marina Phomséna", "telephone": "C : (514) 264-5183", "loyer_prevu": "1 300,00 $", "disponible": "1 juil. 2026", "pieces": ""}]}, {"adresse": "1473, 1473 De Ribeira- Grande, Laval (Québec) H7W 5N8", "agents": ["Repris par le proprio"], "rue": "1473 De Ribeira- Grande, Laval", "unites": [{"appartement": "1473, Ribeira-Grande", "bail": "3810", "locataire": "Panorea Zaharatos", "telephone": "C : (514) 993-0953", "loyer_prevu": "1 715,00 $", "disponible": "1 juil. 2026", "pieces": "4 ½"}]}, {"adresse": "1475, 1475 de Ribeira- Grande, Laval (Québec) H7W 5N8", "agents": ["Repris par le proprio"], "rue": "1475 de Ribeira- Grande, Laval", "unites": [{"appartement": "1475, Ribeira- Grande", "bail": "464069", "locataire": "Linda Bissonnette, Michel Percy", "telephone": "C : (450) 934-2122 / C : (450) 934-2122", "loyer_prevu": "1 160,00 $", "disponible": "1 juil. 2026", "pieces": ""}]}, {"adresse": "1535, 1535 du Grand-Pic, Laval (Québec) H7L 0K8", "agents": ["Janie", "Isabelle"], "rue": "1535 du Grand-Pic, Laval", "unites": [{"appartement": "101", "bail": "", "locataire": "", "telephone": "", "loyer_prevu": "2 100,00 $", "disponible": "", "pieces": ""}, {"appartement": "103", "bail": "3334", "locataire": "Anna Gestions Immobilière", "telephone": "C : (514) 702-4004", "loyer_prevu": "2 196,00 $", "disponible": "1 juil. 2026", "pieces": ""}, {"appartement": "202", "bail": "3803", "locataire": "Laurie Coull", "telephone": "C : (438) 225-6687", "loyer_prevu": "2 068,00 $", "disponible": "1 juil. 2026", "pieces": ""}]}, {"adresse": "1555, 1555 du Grand-Pic, Laval (Québec) H7L 0K8", "agents": ["Janie", "Isabelle"], "rue": "1555 du Grand-Pic, Laval", "unites": [{"appartement": "103", "bail": "3069", "locataire": "Arianne Cuillerier, Olivier Mayrand", "telephone": "C : (514) 887-9854 / C : (438) 351-5705", "loyer_prevu": "2 062,00 $", "disponible": "", "pieces": ""}, {"appartement": "302", "bail": "", "locataire": "", "telephone": "", "loyer_prevu": "2 400,00 $", "disponible": "", "pieces": ""}]}, {"adresse": "1585, 1585 du Grand-Pic, Laval (Québec) H7L 0K8", "agents": ["Janie", "Isabelle"], "rue": "1585 du Grand-Pic, Laval", "unites": [{"appartement": "202", "bail": "3748", "locataire": "Fatou Binetou Ba", "telephone": "", "loyer_prevu": "2 500,00 $", "disponible": "1 juil. 2026", "pieces": ""}, {"appartement": "302", "bail": "", "locataire": "", "telephone": "", "loyer_prevu": "2 500,00 $", "disponible": "", "pieces": ""}]}, {"adresse": "1595, 1595 du Grand-Pic, Laval (Québec) H7L 0K8", "agents": ["Janie", "Isabelle"], "rue": "1595 du Grand-Pic, Laval", "unites": [{"appartement": "101", "bail": "", "locataire": "", "telephone": "", "loyer_prevu": "2 100,00 $", "disponible": "", "pieces": ""}, {"appartement": "102", "bail": "3732", "locataire": "Rachida Boukhris", "telephone": "C : (263) 688-1212", "loyer_prevu": "1 655,00 $", "disponible": "", "pieces": ""}, {"appartement": "302", "bail": "", "locataire": "", "telephone": "", "loyer_prevu": "2 300,00 $", "disponible": "", "pieces": ""}]}, {"adresse": "161, 161 Saule-Noir, Terrebonne (Québec) J6V 0G3", "agents": ["Maria", "Janie"], "rue": "161 Saule-Noir, Terrebonne", "unites": [{"appartement": "106", "bail": "817", "locataire": "Denise Paradis-Côté", "telephone": "C : (514) 713-1687", "loyer_prevu": "1 470,00 $", "disponible": "", "pieces": "4 ½"}, {"appartement": "205", "bail": "464083", "locataire": "Elita Estiverne, Frensheska François", "telephone": "C : (514) 503-5338 / C : (438) 867-9801", "loyer_prevu": "1 736,00 $", "disponible": "1 juil. 2026", "pieces": "4 ½"}]}, {"adresse": "1655, 1655 du Grand-Pic, Laval (Québec) H7L 5T8", "agents": ["Maria", "Janie"], "rue": "1655 du Grand-Pic, Laval", "unites": [{"appartement": "101", "bail": "2167", "locataire": "Jose Luis Yanez", "telephone": "C : (438) 407-5750", "loyer_prevu": "2 100,00 $", "disponible": "1 juil. 2026", "pieces": ""}, {"appartement": "102", "bail": "", "locataire": "", "telephone": "", "loyer_prevu": "1 650,00 $", "disponible": "1 juil. 2026", "pieces": ""}, {"appartement": "Bail (3709)", "bail": "3709", "locataire": "Jafaar Fneich", "telephone": "C : (514) 706-9684", "loyer_prevu": "", "disponible": "", "pieces": ""}, {"appartement": "201", "bail": "", "locataire": "Maria Karafotis", "telephone": "C : (514) 806-0102", "loyer_prevu": "2 400,00 $", "disponible": "", "pieces": ""}, {"appartement": "202", "bail": "2655", "locataire": "Martin De Grandpre", "telephone": "C : (514) 926-1562", "loyer_prevu": "2 400,00 $", "disponible": "1 juil. 2026", "pieces": ""}]}, {"adresse": "1745, 1745 Rue de Plaisance, Terrebonne (Québec) J6X 0K7", "agents": ["Maria", "Isabelle"], "rue": "1745 Rue de Plaisance, Terrebonne", "unites": [{"appartement": "208", "bail": "484994", "locataire": "Marie-Josée Nantel", "telephone": "C : (514) 688-1340", "loyer_prevu": "2 573,00 $", "disponible": "1 juil. 2026", "pieces": "5 ½"}, {"appartement": "305", "bail": "485978", "locataire": "Kevin Pelletier", "telephone": "C : (438) 998-8838", "loyer_prevu": "1 612,00 $", "disponible": "1 juil. 2026", "pieces": "3 ½"}, {"appartement": "402", "bail": "504473", "locataire": "Dany Gauthier", "telephone": "", "loyer_prevu": "2 100,00 $", "disponible": "1 juil. 2026", "pieces": "4 ½"}, {"appartement": "403", "bail": "486006", "locataire": "Josée Girard", "telephone": "C : (514) 622-0132", "loyer_prevu": "2 468,00 $", "disponible": "1 juil. 2026", "pieces": "4 ½"}, {"appartement": "404", "bail": "486008", "locataire": "Maher Belouahchia", "telephone": "C : 514 554 5488", "loyer_prevu": "1 725,00 $", "disponible": "1 juil. 2026", "pieces": "3 ½"}]}, {"adresse": "2095-202, 2095 Papineau, Montréal (Québec) H2K 4J5", "agents": ["Janie"], "rue": "2095 Papineau, Montréal", "unites": [{"appartement": "202", "bail": "", "locataire": "", "telephone": "", "loyer_prevu": "", "disponible": "", "pieces": ""}]}, {"adresse": "2095-301, 2095 Papineau, Montréal (Québec) H2K 4J5", "agents": ["Janie"], "rue": "2095 Papineau, Montréal", "unites": [{"appartement": "301", "bail": "2539", "locataire": "Arame M'baye", "telephone": "", "loyer_prevu": "1 750,00 $", "disponible": "1 juil. 2026", "pieces": ""}]}, {"adresse": "2095-306, 2095 Papineau, Montréal (Québec) H2K 4J5", "agents": ["Janie"], "rue": "2095 Papineau, Montréal", "unites": [{"appartement": "306", "bail": "4014", "locataire": "Mélissa Urban", "telephone": "C : (438) 809-7266", "loyer_prevu": "1 535,00 $", "disponible": "", "pieces": ""}]}, {"adresse": "2290, 2290 de la Jonquille, Terrebonne (Québec) J7M 2G5", "agents": ["Ophélie"], "rue": "2290 de la Jonquille, Terrebonne", "unites": [{"appartement": "301", "bail": "", "locataire": "", "telephone": "", "loyer_prevu": "0,00 $", "disponible": "1 juil. 2026", "pieces": "4 ½"}, {"appartement": "Bail (2087)", "bail": "2087", "locataire": "Christophe Desprez", "telephone": "C : (438) 777-3617", "loyer_prevu": "", "disponible": "", "pieces": ""}]}, {"adresse": "2303 DORIO, 2303 Dorion, Montreal (Québec) H2K 4B5", "agents": ["Janie"], "rue": "2303 Dorion, Montreal", "unites": [{"appartement": "2303, Dorion", "bail": "", "locataire": "", "telephone": "", "loyer_prevu": "1 350,00 $", "disponible": "", "pieces": "3 ½"}]}, {"adresse": "2330, 2330 de la Jonquille, Terrebonne (Québec) J7M 2G5", "agents": ["Ophélie"], "rue": "2330 de la Jonquille, Terrebonne", "unites": [{"appartement": "301", "bail": "", "locataire": "", "telephone": "", "loyer_prevu": "1 060,00 $", "disponible": "", "pieces": "4 ½"}]}, {"adresse": "2350, 2350 de la Jonquille, Terrebonne (Québec) J7M 2G5", "agents": ["Ophélie"], "rue": "2350 de la Jonquille, Terrebonne", "unites": [{"appartement": "403", "bail": "", "locataire": "", "telephone": "", "loyer_prevu": "1 465,00 $", "disponible": "1 juil. 2026", "pieces": "4 ½"}, {"appartement": "Bail (4042)", "bail": "4042", "locataire": "Megan Lefebvre Monette, Mylène Surprenant", "telephone": "C : (450) 530-4004 / C : (514) 952-0302", "loyer_prevu": "", "disponible": "", "pieces": ""}]}, {"adresse": "257, 257 Montée Sanche, Boisbriand (Québec) J7G 2E1", "agents": ["Josée"], "rue": "257 Montée Sanche, Boisbriand", "unites": [{"appartement": "201", "bail": "3955", "locataire": "Elie Abou Khalil", "telephone": "C : (514) 241-6586", "loyer_prevu": "2 030,00 $", "disponible": "1 juil. 2026", "pieces": "4 ½"}, {"appartement": "202", "bail": "465677", "locataire": "Sylvia Guterres", "telephone": "C : 5145862885", "loyer_prevu": "2 050,00 $", "disponible": "1 juil. 2026", "pieces": "4 ½"}]}, {"adresse": "265-A ANGE, 265 Angèle-Chartrand, Laval (Québec) H7H 1N9", "agents": ["Josée"], "rue": "265 Angèle-Chartrand, Laval", "unites": [{"appartement": "A", "bail": "", "locataire": "", "telephone": "", "loyer_prevu": "2 150,00 $", "disponible": "", "pieces": "4 ½"}]}, {"adresse": "274-A ANGE, 274 Angèle-Chartrand, Laval (Québec) H7H 0B8", "agents": ["Josée"], "rue": "274 Angèle-Chartrand, Laval", "unites": [{"appartement": "A", "bail": "", "locataire": "", "telephone": "", "loyer_prevu": "2 300,00 $", "disponible": "", "pieces": "4 ½"}]}, {"adresse": "289 ANGE, 289 Angèle-Chartrand, Laval (Québec) H7H 1N9", "agents": ["Josée"], "rue": "289 Angèle-Chartrand, Laval", "unites": [{"appartement": "289, Angèle-Chartrand", "bail": "3967", "locataire": "Nadra Agrebi", "telephone": "C : (514) 944-7898", "loyer_prevu": "2 060,00 $", "disponible": "1 juil. 2026", "pieces": "4 ½"}]}, {"adresse": "290-B ANGE, 290 Angèle-Chartrand, Laval (Québec) H9H 0B8", "agents": ["Josée"], "rue": "290 Angèle-Chartrand, Laval", "unites": [{"appartement": "B", "bail": "3092", "locataire": "Antonio Caruso, Nadia D'Ippolito", "telephone": "C : (514) 966-7883 / C : (514) 570-0278", "loyer_prevu": "2 345,00 $", "disponible": "1 juil. 2026", "pieces": "4 ½"}]}, {"adresse": "3187, 3187 Dali, Laval (Québec) H7E 0G7", "agents": ["Janie"], "rue": "3187 Dali, Laval", "unites": [{"appartement": "1", "bail": "239", "locataire": "Guy Saad", "telephone": "C : (514) 892-8008", "loyer_prevu": "1 745,00 $", "disponible": "", "pieces": "5 ½"}]}, {"adresse": "3189, 3189 Dali, Laval (Québec) H7E 0G7", "agents": ["Janie"], "rue": "3189 Dali, Laval", "unites": [{"appartement": "1", "bail": "222", "locataire": "Martin Lalonde", "telephone": "C : (450) 374-0955", "loyer_prevu": "1 115,00 $", "disponible": "1 juil. 2026", "pieces": "3 ½"}]}, {"adresse": "328-A ANGE, 328 Angèle-Chartrand, Laval (Québec) H7H 0B8", "agents": ["Josée"], "rue": "328 Angèle-Chartrand, Laval", "unites": [{"appartement": "A", "bail": "3385", "locataire": "Sonia Ribeiro Ferraria", "telephone": "C : (514) 690-5367", "loyer_prevu": "2 270,00 $", "disponible": "1 juil. 2026", "pieces": "4 ½"}]}, {"adresse": "379, 379 Des Mélèzes, Rosemère (Québec) J7A 0B1", "agents": ["Ophélie"], "rue": "379 Des Mélèzes, Rosemère", "unites": [{"appartement": "302", "bail": "", "locataire": "", "telephone": "", "loyer_prevu": "2 100,00 $", "disponible": "", "pieces": "4 ½"}, {"appartement": "303", "bail": "", "locataire": "", "telephone": "", "loyer_prevu": "1 777,00 $", "disponible": "", "pieces": "3 ½"}]}, {"adresse": "383, 383 Des Mélezes, Rosemère (Québec) J7A 0B1", "agents": ["Ophélie"], "rue": "383 Des Mélezes, Rosemère", "unites": [{"appartement": "303", "bail": "3774", "locataire": "Béluga Construction", "telephone": "C : (450) 818-4020", "loyer_prevu": "2 205,00 $", "disponible": "", "pieces": "3 ½"}]}, {"adresse": "387, 387 Des Mélezes, Rosemère (Québec) J7A 0B1", "agents": ["Ophélie"], "rue": "387 Des Mélezes, Rosemère", "unites": [{"appartement": "203", "bail": "4058", "locataire": "Mathilde Monette", "telephone": "C : (450) 848-7929", "loyer_prevu": "1 825,00 $", "disponible": "1 juil. 2026", "pieces": "3 ½"}, {"appartement": "304", "bail": "3181", "locataire": "Alexandre Belisle", "telephone": "C : (514) 296-9763", "loyer_prevu": "2 175,00 $", "disponible": "1 juil. 2026", "pieces": "5 ½"}]}, {"adresse": "3875, 3875 56 Rue, Laval (Québec) H7R 0H2", "agents": ["Josée"], "rue": "3875 56 Rue, Laval", "unites": [{"appartement": "Appartement 101", "bail": "3350", "locataire": "Tamara Pilotte, Victor Cobzari", "telephone": "C : (514) 226-3650 / C : (438) 528-3264", "loyer_prevu": "1 630,00 $", "disponible": "1 juil. 2026", "pieces": "3 ½"}, {"appartement": "Appartement 105", "bail": "3212", "locataire": "Praveen Kumar Panaganti", "telephone": "C : (438) 928-4941", "loyer_prevu": "1 750,00 $", "disponible": "1 juil. 2026", "pieces": "3 ½"}, {"appartement": "Appartement 106", "bail": "4051", "locataire": "Gilles Breard", "telephone": "C : (514) 348-0105", "loyer_prevu": "2 105,00 $", "disponible": "", "pieces": "4 ½"}, {"appartement": "Appartement 107", "bail": "3247", "locataire": "Ivania Ibarra, Jesus Melendez", "telephone": "C : (514) 224-3627 / C : (514) 774-3753", "loyer_prevu": "1 985,00 $", "disponible": "", "pieces": "4 ½"}, {"appartement": "Appartement 126", "bail": "457073", "locataire": "Jose Manuel Varela Moya", "telephone": "C : 5148626691", "loyer_prevu": "1 597,00 $", "disponible": "", "pieces": "3 ½"}, {"appartement": "Appartement 127", "bail": "", "locataire": "", "telephone": "", "loyer_prevu": "1 885,00 $", "disponible": "", "pieces": "4 ½"}, {"appartement": "Appartement 134", "bail": "", "locataire": "", "telephone": "", "loyer_prevu": "2 160,00 $", "disponible": "", "pieces": "4 ½"}, {"appartement": "Appartement 215", "bail": "", "locataire": "", "telephone": "", "loyer_prevu": "1 300,00 $", "disponible": "", "pieces": "3 ½"}, {"appartement": "Appartement 227", "bail": "3779", "locataire": "Arshdeep Kaur Sohi", "telephone": "C : (604) 377-9765", "loyer_prevu": "2 045,00 $", "disponible": "", "pieces": "4 ½"}, {"appartement": "Appartement 305", "bail": "3988", "locataire": "Klaudia Selmanaj", "telephone": "C : (438) 835-1674", "loyer_prevu": "1 660,00 $", "disponible": "1 juil. 2026", "pieces": "3 ½"}, {"appartement": "Appartement 310", "bail": "3591", "locataire": "Florina Maria Herban, Harold Cristian Herban", "telephone": "C : (438) 838-4401 / C : (438) 988-4210", "loyer_prevu": "1 730,00 $", "disponible": "", "pieces": "3 ½"}, {"appartement": "Appartement 312", "bail": "3228", "locataire": "Ana Maria Gil Dale", "telephone": "C : (514) 586-7250", "loyer_prevu": "1 715,00 $", "disponible": "1 juil. 2026", "pieces": "3 ½"}, {"appartement": "Appartement 320", "bail": "3137", "locataire": "Carlos Zeta Cruz", "telephone": "C : (514) 569-2717", "loyer_prevu": "1 517,00 $", "disponible": "", "pieces": "3 ½"}, {"appartement": "Appartement 326", "bail": "499700", "locataire": "René-Daniel Lejeune", "telephone": "C : (514) 945-7523", "loyer_prevu": "1 700,00 $", "disponible": "", "pieces": "3 ½"}, {"appartement": "Appartement 327", "bail": "3518", "locataire": "Vladimir Labady", "telephone": "C : (438) 869-7707", "loyer_prevu": "1 965,00 $", "disponible": "", "pieces": "4 ½"}, {"appartement": "Appartement 334", "bail": "3540", "locataire": "Eve Chevrier", "telephone": "C : (514) 503-3994", "loyer_prevu": "1 731,00 $", "disponible": "1 juil. 2026", "pieces": "3 ½"}]}, {"adresse": "489, 489 Vérone, Terrebonne (Québec) J6W 5K7", "agents": ["Ophélie"], "rue": "489 Vérone, Terrebonne", "unites": [{"appartement": "6", "bail": "2070", "locataire": "Raymond Roy", "telephone": "C : (514) 603-1201", "loyer_prevu": "1 012,00 $", "disponible": "1 juil. 2026", "pieces": "4 ½"}]}, {"adresse": "4931, 4931 Bélanger, Montréal (Québec) H1T 1C4", "agents": ["Janie"], "rue": "4931 Bélanger, Montréal", "unites": [{"appartement": "2", "bail": "1018", "locataire": "Isabelle Lebron", "telephone": "C : (438) 346-8620", "loyer_prevu": "825,00 $", "disponible": "", "pieces": ""}, {"appartement": "4", "bail": "3313", "locataire": "Jocelyne Teresa Gomez Torres", "telephone": "C : (438) 282-5319", "loyer_prevu": "1 375,00 $", "disponible": "", "pieces": ""}, {"appartement": "6", "bail": "1017", "locataire": "Jorge Munoz", "telephone": "C : (514) 729-5376", "loyer_prevu": "616,00 $", "disponible": "", "pieces": ""}]}, {"adresse": "499, 499 Vérone, Terrebonne (Québec) J6W 5K8", "agents": ["Ophélie"], "rue": "499 Vérone, Terrebonne", "unites": [{"appartement": "3", "bail": "3033", "locataire": "Noemie Martel", "telephone": "C : (438) 874-8744", "loyer_prevu": "1 109,00 $", "disponible": "1 juil. 2026", "pieces": "4 ½"}]}, {"adresse": "509, 509 Vérone, Terrebonne (Québec) J6W 5L2", "agents": ["Ophélie"], "rue": "509 Vérone, Terrebonne", "unites": [{"appartement": "1", "bail": "2078", "locataire": "Gina Fernanda, Kevin Pineault", "telephone": "C : 5147915596 / C : (514) 475-7621", "loyer_prevu": "1 025,00 $", "disponible": "1 juil. 2026", "pieces": "4 ½"}]}, {"adresse": "60, 60 Picard, Charlemagne (Québec) J5Z 1V1", "agents": ["Maria", "Janie"], "rue": "60 Picard, Charlemagne", "unites": [{"appartement": "1", "bail": "473899", "locataire": "Alexis Bélanger, Angelyna Denuziere", "telephone": "C : 4388828103 / C : 5148303554", "loyer_prevu": "1 630,00 $", "disponible": "1 juil. 2026", "pieces": "4 ½"}, {"appartement": "8", "bail": "2326", "locataire": "Marie Pier Boisvert", "telephone": "C : (514) 641-1629", "loyer_prevu": "1 625,00 $", "disponible": "1 juil. 2026", "pieces": "4 ½"}]}, {"adresse": "64-B, 64 Principale, Laval (Québec) H7X 0C7", "agents": ["Repris par le proprio"], "rue": "64 Principale, Laval", "unites": [{"appartement": "B", "bail": "3993", "locataire": "Linda Corrente", "telephone": "C : (514) 518-2400", "loyer_prevu": "1 665,00 $", "disponible": "1 juil. 2026", "pieces": ""}]}, {"adresse": "69 CAMPAG, 69 Campagnol, Lachenaie (Québec) J6V 0H9", "agents": ["Maria", "Janie"], "rue": "69 Campagnol, Lachenaie", "unites": [{"appartement": "69, Campagnol", "bail": "464147", "locataire": "Marina Bouchard, Nathalie Duguay", "telephone": "C : (514) 691-3678 / C : (514) 237-6543", "loyer_prevu": "1 845,00 $", "disponible": "1 juil. 2026", "pieces": "5 ½"}]}, {"adresse": "699, 699 Peladeau, Laval (Québec) H7K 0E2", "agents": ["Janie"], "rue": "699 Peladeau, Laval", "unites": [{"appartement": "699, Péladeau", "bail": "3867", "locataire": "Garo Malakhanian", "telephone": "C : (438) 885-0232", "loyer_prevu": "1 913,00 $", "disponible": "1 juil. 2026", "pieces": ""}]}, {"adresse": "72, 72 Principale, Laval (Québec) H7X 0C7", "agents": ["Repris par le proprio"], "rue": "72 Principale, Laval", "unites": [{"appartement": "A", "bail": "2915", "locataire": "Gestions Immobilière Anna", "telephone": "C : (514) 702-4004", "loyer_prevu": "1 891,00 $", "disponible": "1 juil. 2026", "pieces": ""}]}, {"adresse": "75 CAMPAG, 75 Campagnol, Lachenaie (Québec) J6V 0H9", "agents": ["Maria", "Janie"], "rue": "75 Campagnol, Lachenaie", "unites": [{"appartement": "75, Campagnol", "bail": "2147", "locataire": "Sophie Robichaud", "telephone": "C : (514) 830-0458", "loyer_prevu": "1 856,00 $", "disponible": "1 juil. 2026", "pieces": "4 ½"}]}, {"adresse": "756, Mont-Laval", "agents": ["Myriam"], "rue": "Mont-Laval, ", "unites": [{"appartement": "Bail (2829)", "bail": "2829", "locataire": "Pamela Lagunas", "telephone": "C : (514) 863-2967", "loyer_prevu": "", "disponible": "", "pieces": ""}]}, {"adresse": "768 MONT-L, 768 Mont-Laval, Laval (Québec) H7X 0G2", "agents": ["Myriam"], "rue": "768 Mont-Laval, Laval", "unites": [{"appartement": "1", "bail": "", "locataire": "", "telephone": "", "loyer_prevu": "1 905,00 $", "disponible": "", "pieces": "4 ½"}]}, {"adresse": "788 MONT-L, 788 Mont-Laval, Laval (Québec) H7X 0G2", "agents": ["Myriam"], "rue": "788 Mont-Laval, Laval", "unites": []}, {"adresse": "815 CROISS, 815 Croissant des Roselins, Laval (Québec) H7L 0K5", "agents": ["Janie", "Isabelle"], "rue": "815 Croissant des Roselins, Laval", "unites": [{"appartement": "815, Croissant des Roselins", "bail": "3599", "locataire": "Jean-Yves Paquin", "telephone": "C : (438) 390-8726", "loyer_prevu": "2 375,00 $", "disponible": "", "pieces": "4 ½"}]}, {"adresse": "835 CROISS, 835 Croissant des Roselins, Laval (Québec) H7L 0K5", "agents": ["Janie", "Isabelle"], "rue": "835 Croissant des Roselins, Laval", "unites": [{"appartement": "835, Croissant des Roselins", "bail": "3537", "locataire": "Lana Ibrahim", "telephone": "C : (514) 515-8104", "loyer_prevu": "2 200,00 $", "disponible": "1 avr. 2026", "pieces": "4 ½"}]}, {"adresse": "861 CROISS, 861 Croissant des Roselins, Laval (Québec) H7L 0K5", "agents": ["Janie", "Isabelle"], "rue": "861 Croissant des Roselins, Laval", "unites": [{"appartement": "202", "bail": "4020", "locataire": "Youssef Belmadani, Zineb Nakri", "telephone": "C : (613) 296-6660 / C : (613) 250-8937", "loyer_prevu": "2 435,00 $", "disponible": "1 avr. 2026", "pieces": "5 ½"}]}, {"adresse": "871 CROISS, 871 Croissant des Roselins, Laval (Québec) H7L 0K5", "agents": ["Janie", "Isabelle"], "rue": "871 Croissant des Roselins, Laval", "unites": [{"appartement": "101", "bail": "3780", "locataire": "Marie-Julie Trudel, Pierre-Olivier Desjardins", "telephone": "C : (438) 868-1951 / C : (450) 626-1951", "loyer_prevu": "2 165,00 $", "disponible": "1 juil. 2026", "pieces": "4 ½"}, {"appartement": "103", "bail": "3876", "locataire": "Michel Besilis", "telephone": "", "loyer_prevu": "1 775,00 $", "disponible": "", "pieces": "4 ½"}]}, {"adresse": "881 CROISS, 881 Croissant des Roselins, Laval (Québec) H7L 5T8", "agents": ["Janie", "Isabelle"], "rue": "881 Croissant des Roselins, Laval", "unites": [{"appartement": "103", "bail": "", "locataire": "", "telephone": "", "loyer_prevu": "2 000,00 $", "disponible": "", "pieces": "4 ½"}, {"appartement": "201", "bail": "465386", "locataire": "Noor Abou El-Oon, Walid Maarabani", "telephone": "C : (514) 692-5041", "loyer_prevu": "2 200,00 $", "disponible": "", "pieces": "5 ½"}, {"appartement": "202", "bail": "3753", "locataire": "Lyne Loiselle, Sylvain Grégoire", "telephone": "C : (514) 945-9465 / C : (514) 862-6750", "loyer_prevu": "2 650,00 $", "disponible": "", "pieces": "5 ½"}]}, {"adresse": "881 TOUPIN, 881 Toupin, L'Assomption (Québec) J5W 0B3", "agents": ["Maria"], "rue": "881 Toupin, L'Assomption", "unites": [{"appartement": "881, Toupin", "bail": "3785", "locataire": "Chad Brien Cloutier", "telephone": "C : (819) 350-1935", "loyer_prevu": "1 005,00 $", "disponible": "", "pieces": "4 ½"}]}, {"adresse": "88-516, 88 Rue Gary-Carter, Montréal (Québec) H2R 0B3", "agents": ["Janie"], "rue": "88 Rue Gary-Carter, Montréal", "unites": [{"appartement": "516", "bail": "3755", "locataire": "Gabriel-Rodrigo Trigueros-Corbo", "telephone": "C : (514) 299-1112", "loyer_prevu": "1 555,00 $", "disponible": "1 juil. 2026", "pieces": ""}]}, {"adresse": "90 POM, 90 du Pomérol, Boisbriand (Québec) J7G 3J7", "agents": ["Josée"], "rue": "90 du Pomérol, Boisbriand", "unites": [{"appartement": "304", "bail": "3905", "locataire": "Simon Codere", "telephone": "C : (514) 258-8159", "loyer_prevu": "1 970,00 $", "disponible": "", "pieces": "4 ½"}]}];
 
+// Colors per agent group
+const AGENT_COLORS = {
+  'Josée':               { bg: '#1a3a5c', text: '#FFFFFF', light: '#e8f0fa' },
+  'Maria':               { bg: '#1a5c3a', text: '#FFFFFF', light: '#e8faef' },
+  'Isabelle':            { bg: '#5c1a5c', text: '#FFFFFF', light: '#fae8fa' },
+  'Lina':                { bg: '#5c3a1a', text: '#FFFFFF', light: '#faf0e8' },
+  'Janie':               { bg: '#1a5c5c', text: '#FFFFFF', light: '#e8fafa' },
+  'Myriam':              { bg: '#5c1a1a', text: '#FFFFFF', light: '#fae8e8' },
+  'Ophélie':             { bg: '#3a1a5c', text: '#FFFFFF', light: '#f0e8fa' },
+  'Repris par le proprio': { bg: '#3a3a3a', text: '#FFFFFF', light: '#f0f0f0' },
+  'default':             { bg: '#2a2a5c', text: '#FFFFFF', light: '#e8e8fa' }
+};
 
-
-  const params = new URLSearchParams({
-    client_id: CLIENT_ID,
-    redirect_uri: 'https://psylvestre1956-cyber.github.io/lelogeur-agent',
-    response_type: 'token',
-    scope: SCOPES,
-    prompt: 'consent'
-  });
-  window.location.href = 'https://accounts.google.com/o/oauth2/auth?' + params;
-}
-
-function afficherInstructions() {
-  document.getElementById('card-step1').innerHTML = `
-    <div class="card-label">Configuration requise — Client ID Google</div>
-    <p style="font-size:13px;color:var(--muted);line-height:1.7;margin-bottom:16px;">
-      Pour que l'agent se connecte directement à Google Sheets, tu dois créer un Client ID gratuit sur Google Cloud Console (2 minutes).
-    </p>
-    <div style="background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:14px;font-family:var(--mono);font-size:12px;line-height:2;color:var(--muted);">
-      <div style="color:var(--accent);">// Étapes :</div>
-      <div>1. Va sur <a href="https://console.cloud.google.com" target="_blank" style="color:var(--accent2);">console.cloud.google.com</a></div>
-      <div>2. Nouveau projet → APIs → Google Sheets API → Activer</div>
-      <div>3. Identifiants → Créer → ID client OAuth → Application Web</div>
-      <div>4. Origines autorisées : ajoute l'URL de ta page</div>
-      <div>5. Copie le Client ID et remplace dans le HTML :</div>
-      <div style="color:var(--accent2);margin-top:4px;">const CLIENT_ID = '<span style="color:var(--warn);">TON-ID.apps.googleusercontent.com</span>';</div>
-    </div>
-    <a class="result-link" href="https://console.cloud.google.com/apis/credentials" target="_blank">
-      <span>Ouvrir Google Cloud Console</span><span>↗</span>
-    </a>
-  `;
-}
-
-// Vérifier token dans URL au chargement (retour OAuth)
-window.addEventListener('load', () => {
-  const hash = new URLSearchParams(window.location.hash.substring(1));
-  const token = hash.get('access_token');
-  if (token) {
-    accessToken = token;
-    window.history.replaceState({}, '', window.location.pathname);
-    document.getElementById('s1').textContent = '✓';
-    document.getElementById('s1').classList.add('done');
-    document.getElementById('auth-text').textContent = '✓ Connecté à Google';
-    document.getElementById('btn-auth').style.background = 'linear-gradient(135deg, #1a6b4a, #0d4a32)';
-    document.getElementById('card-step2').style.opacity = '1';
-    document.getElementById('card-step2').style.pointerEvents = 'auto';
-    document.getElementById('btn-run').disabled = false;
-    document.getElementById('card-step3').style.opacity = '1';
+function getAgentColor(agentKey) {
+  const agents = agentKey.split(' & ');
+  for (const a of agents) {
+    if (AGENT_COLORS[a]) return AGENT_COLORS[a];
   }
-});
+  return AGENT_COLORS['default'];
+}
 
-// ── AGENT ───────────────────────────────────────────────
-function log(msg, type='') {
+// Group buildings by agent combination
+function groupByAgent(buildings) {
+  const groups = {};
+  buildings.filter(b => b.unites && b.unites.length > 0).forEach(b => {
+    const key = b.agents.length > 0 ? b.agents.slice().sort().join(' & ') : 'Sans agent';
+    if (!groups[key]) groups[key] = [];
+    groups[key].push(b);
+  });
+  return groups;
+}
+
+// Group buildings within an agent by street name
+function groupByStreet(buildings) {
+  const streets = {};
+  buildings.forEach(b => {
+    const street = b.rue || b.adresse;
+    if (!streets[street]) streets[street] = [];
+    streets[street].push(b);
+  });
+  return streets;
+}
+
+function tabName(agentKey) {
+  return agentKey.substring(0, 30);
+}
+
+function log(msg, type = '') {
   const box = document.getElementById('log');
   const l = document.createElement('div');
   l.className = 'll ' + type;
@@ -240,8 +169,10 @@ function log(msg, type='') {
 
 function setProgress(pct, label) {
   document.getElementById('progress').style.width = pct + '%';
-  if (label) document.getElementById('progress-label').textContent = label;
+  if (label) document.getElementById('plabel').textContent = label;
 }
+
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 
 async function sheetsAPI(method, path, body) {
   const res = await fetch('https://sheets.googleapis.com/v4/spreadsheets/' + path, {
@@ -256,17 +187,44 @@ async function sheetsAPI(method, path, body) {
   return res.json();
 }
 
-function tabName(adresse) {
-  const parts = adresse.split(',');
-  let nom = parts.length > 1
-    ? parts[0].replace(/^[A-Z0-9-]+ /, '').trim() + ' ' + parts[1].trim()
-    : adresse;
-  return nom.substring(0, 30).trim();
+// Auth
+function connecterGoogle() {
+  const btn = document.getElementById('btn-auth');
+  btn.disabled = true;
+  document.getElementById('auth-text').textContent = 'Ouverture...';
+  const params = new URLSearchParams({
+    client_id: CLIENT_ID,
+    redirect_uri: 'https://psylvestre1956-cyber.github.io/lelogeur-agent',
+    response_type: 'token',
+    scope: SCOPES,
+    prompt: 'consent'
+  });
+  window.location.href = 'https://accounts.google.com/o/oauth2/auth?' + params;
 }
+
+window.addEventListener('load', () => {
+  const hash = new URLSearchParams(window.location.hash.substring(1));
+  const token = hash.get('access_token');
+  if (token) {
+    accessToken = token;
+    window.history.replaceState({}, '', window.location.pathname);
+    document.getElementById('s1').textContent = '✓';
+    document.getElementById('s1').classList.add('done');
+    document.getElementById('auth-text').textContent = '✓ Connecté à Google';
+    document.getElementById('btn-auth').style.background = 'linear-gradient(135deg, #1a6b4a, #0d4a32)';
+    document.getElementById('card2').style.opacity = '1';
+    document.getElementById('card2').style.pointerEvents = 'auto';
+    document.getElementById('btn-run').disabled = false;
+    document.getElementById('card3').style.opacity = '1';
+  }
+});
 
 async function lancerAgent() {
   const sheetId = document.getElementById('sheet-id').value.trim();
-  if (!sheetId) { alert('Entre l\'ID du Google Sheet!'); return; }
+  if (!sheetId || sheetId.includes('http')) {
+    alert('Entre seulement l\'ID du Sheet (pas l\'URL complète)!');
+    return;
+  }
 
   document.getElementById('btn-run').disabled = true;
   document.getElementById('run-text').textContent = 'En cours...';
@@ -275,97 +233,261 @@ async function lancerAgent() {
 
   try {
     log('→ Connexion au Sheet...', 'hi');
-    setProgress(5, 'Lecture du Sheet...');
+    setProgress(3, 'Lecture du Sheet...');
 
-    // Récupérer les onglets existants
+    // Get existing sheets and data
     const info = await sheetsAPI('GET', sheetId + '?fields=sheets.properties');
-    const existing = info.sheets.map(s => s.properties.title);
-    log('→ Sheet ouvert. Onglets existants: ' + existing.length, 'hi');
+    const existingSheets = info.sheets.map(s => ({ title: s.properties.title, id: s.properties.sheetId }));
+    log('→ ' + existingSheets.length + ' onglets existants trouvés', 'hi');
+
+    // Group buildings by agent
+    const agentGroups = groupByAgent(BUILDINGS);
+    const agentKeys = Object.keys(agentGroups);
+    log('→ ' + agentKeys.length + ' groupes d\'agents à traiter', 'hi');
     setProgress(10, 'Préparation des onglets...');
 
-    const total = BUILDINGS.length + 1; // +1 pour Sommaire
-    let done = 0;
-
-    // Créer tous les onglets manquants d'un coup (batch)
-    const toCreate = [];
-    for (const b of BUILDINGS) {
-      const name = tabName(b.adresse);
-      if (!existing.includes(name)) toCreate.push(name);
-    }
-    if (!existing.includes('Sommaire')) toCreate.unshift('Sommaire');
-
-    if (toCreate.length > 0) {
-      log('→ Création de ' + toCreate.length + ' onglets...', 'hi');
-      const requests = toCreate.map(title => ({ addSheet: { properties: { title } } }));
+    // Create missing sheets
+    const sheetsToCreate = agentKeys.filter(key => !existingSheets.find(s => s.title === tabName(key)));
+    if (sheetsToCreate.length > 0) {
+      const requests = sheetsToCreate.map(key => ({ addSheet: { properties: { title: tabName(key) } } }));
       await sheetsAPI('POST', sheetId + ':batchUpdate', { requests });
-      log('✓ ' + toCreate.length + ' onglets créés', 'ok');
+      log('✓ ' + sheetsToCreate.length + ' onglets créés', 'ok');
     }
 
-    setProgress(25, 'Remplissage des données...');
+    setProgress(20, 'Génération du contenu...');
 
-    // Remplir chaque onglet
+    // Build all data for batch update
     const valueUpdates = [];
+    let agentIdx = 0;
 
-    // Sommaire
-    const sommaireRows = [
-      ['LeLogeur — Unités disponibles', '', '', '', '', ''],
-      ['Généré le ' + new Date().toLocaleDateString('fr-CA'), '', '', '', '', ''],
-      ['', '', '', '', '', ''],
-      ['Adresse', 'Ville', 'Unités', 'Loyer min', 'Loyer max', 'Disponible dès']
-    ];
-    for (const b of BUILDINGS) {
-      const loyers = b.unites.map(u => u.loyer_prevu).filter(l => l)
-        .map(l => parseFloat(l.replace(/[^0-9,.]/g,'').replace(',','.'))).filter(n => !isNaN(n) && n > 0);
-      const ville = b.adresse.split(',')[2] ? b.adresse.split(',')[2].replace(/\s*\(Québec\).*/,'').trim() : '';
-      const dispo = b.unites.map(u => u.disponible).filter(d => d)[0] || '—';
-      sommaireRows.push([
-        b.adresse.split(',').slice(0,2).join(',').substring(0,60),
-        ville,
-        b.unites.length,
-        loyers.length ? Math.min(...loyers).toFixed(2) + ' $' : '—',
-        loyers.length ? Math.max(...loyers).toFixed(2) + ' $' : '—',
-        dispo
-      ]);
+    for (const agentKey of agentKeys) {
+      const buildings = agentGroups[agentKey];
+      const streetGroups = groupByStreet(buildings);
+      const color = getAgentColor(agentKey);
+      const tab = tabName(agentKey);
+
+      // Build rows for this sheet
+      const rows = [];
+
+      // Title row
+      rows.push([`Agent(s) : ${agentKey}`, '', '', '', '', '', '', '']);
+      rows.push(['Mise à jour : ' + new Date().toLocaleDateString('fr-CA'), '', '', '', '', '', '', '']);
+      rows.push(['', '', '', '', '', '', '', '']);
+
+      // Headers
+      rows.push(['Adresse', 'Apt', 'Bail #', 'Locataire', 'Téléphone', 'Loyer prévu', 'Disponible', 'Pièces']);
+
+      // Data grouped by street
+      const sortedStreets = Object.keys(streetGroups).sort();
+      for (const street of sortedStreets) {
+        const streetBuildings = streetGroups[street];
+        // Street separator row
+        rows.push([`📍 ${street}`, '', '', '', '', '', '', '']);
+
+        for (const b of streetBuildings) {
+          const validUnits = b.unites.filter(u =>
+            u.appartement &&
+            !['Liste des unités', 'Appartement', 'Condominium', 'Identification', 'Apparte'].includes(u.appartement) &&
+            !u.appartement.startsWith('Stationnement')
+          );
+          for (const u of validUnits) {
+            rows.push([
+              b.adresse.split(',').slice(1).join(',').trim().substring(0, 50),
+              u.appartement || '',
+              u.bail || '',
+              u.locataire || '',
+              u.telephone || '',
+              u.loyer_prevu || '',
+              u.disponible || '',
+              u.pieces || ''
+            ]);
+          }
+        }
+        rows.push(['', '', '', '', '', '', '', '']); // spacing
+      }
+
+      valueUpdates.push({ range: `'${tab}'!A1`, values: rows });
+      agentIdx++;
+
+      const pct = 20 + Math.round((agentIdx / agentKeys.length) * 50);
+      setProgress(pct, `Agent ${agentIdx}/${agentKeys.length} : ${agentKey}`);
     }
-    valueUpdates.push({ range: 'Sommaire!A1', values: sommaireRows });
 
-    // Chaque bâtiment
-    for (const b of BUILDINGS) {
-      const name = tabName(b.adresse);
-      const rows = [
-        [b.adresse.split(',').slice(1).join(',').trim()],
-        [b.unites.length + ' unité(s)'],
-        [],
-        ['Appartement','Bail #','Locataire','Téléphone','Statut','Loyer prévu','Disponible','Pièces'],
-        ...b.unites.map(u => [u.appartement||'', u.bail||'', u.locataire||'', u.telephone||'', u.statut||'', u.loyer_prevu||'', u.disponible||'', u.pieces||''])
-      ];
-      valueUpdates.push({ range: `'${name}'!A1`, values: rows });
-      done++;
-    }
-
-    // Envoyer tout en batch (max 10 MB, on splitte si nécessaire)
-    const BATCH = 20;
+    // Send data in batches
+    const BATCH = 5;
     for (let i = 0; i < valueUpdates.length; i += BATCH) {
       const chunk = valueUpdates.slice(i, i + BATCH);
       await sheetsAPI('POST', sheetId + '/values:batchUpdate', {
         valueInputOption: 'RAW',
         data: chunk
       });
-      const pct = Math.round(25 + (i / valueUpdates.length) * 70);
-      setProgress(pct, `Remplissage... ${Math.min(i + BATCH, valueUpdates.length)}/${valueUpdates.length}`);
-      log('✓ Batch ' + (Math.floor(i/BATCH)+1) + ' envoyé (' + chunk.length + ' onglets)', 'ok');
+      await sleep(300);
     }
 
-    setProgress(100, 'Terminé!');
-    log('');
-    log('✓ ' + BUILDINGS.length + ' onglets créés avec succès!', 'ok');
-    log('✓ Onglet Sommaire créé', 'ok');
+    log('✓ Données envoyées!', 'ok');
+    setProgress(75, 'Application du formatage...');
+
+    // Get updated sheet info for formatting
+    const updatedInfo = await sheetsAPI('GET', sheetId + '?fields=sheets.properties');
+    const sheetMap = {};
+    updatedInfo.sheets.forEach(s => { sheetMap[s.properties.title] = s.properties.sheetId; });
+
+    // Apply formatting
+    const formatRequests = [];
+
+    for (const agentKey of agentKeys) {
+      const buildings = agentGroups[agentKey];
+      const streetGroups = groupByStreet(buildings);
+      const color = getAgentColor(agentKey);
+      const tab = tabName(agentKey);
+      const sheetIdNum = sheetMap[tab];
+      if (sheetIdNum === undefined) continue;
+
+      // Helper: hex to rgb
+      function hexToRgb(hex) {
+        const r = parseInt(hex.slice(1,3),16)/255;
+        const g = parseInt(hex.slice(3,5),16)/255;
+        const b = parseInt(hex.slice(5,7),16)/255;
+        return { red: r, green: g, blue: b };
+      }
+
+      const headerBg = hexToRgb(color.bg);
+      const lightBg = hexToRgb(color.light);
+      const streetBg = { red: 0.95, green: 0.95, blue: 0.95 };
+
+      // Format title row (row 0)
+      formatRequests.push({
+        repeatCell: {
+          range: { sheetId: sheetIdNum, startRowIndex: 0, endRowIndex: 1, startColumnIndex: 0, endColumnIndex: 8 },
+          cell: { userEnteredFormat: {
+            backgroundColor: headerBg,
+            textFormat: { foregroundColor: { red:1, green:1, blue:1 }, bold: true, fontSize: 12 },
+            verticalAlignment: 'MIDDLE'
+          }},
+          fields: 'userEnteredFormat(backgroundColor,textFormat,verticalAlignment)'
+        }
+      });
+
+      // Format header row (row 3)
+      formatRequests.push({
+        repeatCell: {
+          range: { sheetId: sheetIdNum, startRowIndex: 3, endRowIndex: 4, startColumnIndex: 0, endColumnIndex: 8 },
+          cell: { userEnteredFormat: {
+            backgroundColor: headerBg,
+            textFormat: { foregroundColor: { red:1, green:1, blue:1 }, bold: true, fontSize: 10 },
+            verticalAlignment: 'MIDDLE',
+            horizontalAlignment: 'CENTER'
+          }},
+          fields: 'userEnteredFormat(backgroundColor,textFormat,verticalAlignment,horizontalAlignment)'
+        }
+      });
+
+      // Set column widths
+      const colWidths = [200, 100, 80, 200, 180, 110, 110, 70];
+      colWidths.forEach((w, i) => {
+        formatRequests.push({
+          updateDimensionProperties: {
+            range: { sheetId: sheetIdNum, dimension: 'COLUMNS', startIndex: i, endIndex: i+1 },
+            properties: { pixelSize: w },
+            fields: 'pixelSize'
+          }
+        });
+      });
+
+      // Freeze header rows
+      formatRequests.push({
+        updateSheetProperties: {
+          properties: { sheetId: sheetIdNum, gridProperties: { frozenRowCount: 4 } },
+          fields: 'gridProperties.frozenRowCount'
+        }
+      });
+
+      // Format data rows - alternate colors + street headers
+      let rowIdx = 4;
+      let dataRowCount = 0;
+      const sortedStreets = Object.keys(streetGroups).sort();
+
+      for (const street of sortedStreets) {
+        // Street header row - gray background
+        formatRequests.push({
+          repeatCell: {
+            range: { sheetId: sheetIdNum, startRowIndex: rowIdx, endRowIndex: rowIdx+1, startColumnIndex: 0, endColumnIndex: 8 },
+            cell: { userEnteredFormat: {
+              backgroundColor: streetBg,
+              textFormat: { bold: true, fontSize: 10, foregroundColor: { red:0.2, green:0.2, blue:0.2 } },
+              verticalAlignment: 'MIDDLE'
+            }},
+            fields: 'userEnteredFormat(backgroundColor,textFormat,verticalAlignment)'
+          }
+        });
+        rowIdx++;
+
+        const streetBuildings = streetGroups[street];
+        for (const b of streetBuildings) {
+          const validUnits = b.unites.filter(u =>
+            u.appartement &&
+            !['Liste des unités', 'Appartement', 'Condominium', 'Identification', 'Apparte'].includes(u.appartement) &&
+            !u.appartement.startsWith('Stationnement')
+          );
+          for (let i = 0; i < validUnits.length; i++) {
+            const isEven = dataRowCount % 2 === 0;
+            const rowBg = isEven ? { red:1, green:1, blue:1 } : lightBg;
+            formatRequests.push({
+              repeatCell: {
+                range: { sheetId: sheetIdNum, startRowIndex: rowIdx, endRowIndex: rowIdx+1, startColumnIndex: 0, endColumnIndex: 8 },
+                cell: { userEnteredFormat: {
+                  backgroundColor: rowBg,
+                  textFormat: { fontSize: 10 },
+                  verticalAlignment: 'MIDDLE'
+                }},
+                fields: 'userEnteredFormat(backgroundColor,textFormat,verticalAlignment)'
+              }
+            });
+            // Borders
+            formatRequests.push({
+              updateBorders: {
+                range: { sheetId: sheetIdNum, startRowIndex: rowIdx, endRowIndex: rowIdx+1, startColumnIndex: 0, endColumnIndex: 8 },
+                bottom: { style: 'SOLID', width: 1, color: { red:0.85, green:0.85, blue:0.85 } },
+                innerVertical: { style: 'SOLID', width: 1, color: { red:0.85, green:0.85, blue:0.85 } }
+              }
+            });
+            rowIdx++;
+            dataRowCount++;
+          }
+        }
+        rowIdx++; // spacing row
+      }
+
+      // Outer border for header
+      formatRequests.push({
+        updateBorders: {
+          range: { sheetId: sheetIdNum, startRowIndex: 3, endRowIndex: 4, startColumnIndex: 0, endColumnIndex: 8 },
+          bottom: { style: 'SOLID_MEDIUM', width: 2, color: { red:0.2, green:0.2, blue:0.2 } },
+          innerVertical: { style: 'SOLID', width: 1, color: { red:1, green:1, blue:1 } }
+        }
+      });
+    }
+
+    // Send formatting in batches
+    const FMT_BATCH = 50;
+    for (let i = 0; i < formatRequests.length; i += FMT_BATCH) {
+      await sheetsAPI('POST', sheetId + ':batchUpdate', { requests: formatRequests.slice(i, i + FMT_BATCH) });
+      await sleep(200);
+      const pct = 75 + Math.round((i / formatRequests.length) * 23);
+      setProgress(pct, 'Formatage...');
+    }
+
+    setProgress(100, 'Terminé! 🎉');
+    log('', '');
+    log('✓ ' + agentKeys.length + ' onglets créés/mis à jour', 'ok');
+    log('✓ En-têtes colorés par agent', 'ok');
+    log('✓ Lignes alternées et séparations verticales', 'ok');
+    log('✓ Regroupement par rue', 'ok');
 
     document.getElementById('result-area').innerHTML = `
       <a class="result-link" href="https://docs.google.com/spreadsheets/d/${sheetId}" target="_blank">
         <span>Ouvrir le Google Sheet ↗</span><span>→</span>
-      </a>
-    `;
+      </a>`;
 
     document.getElementById('run-text').textContent = '✓ Terminé!';
 
