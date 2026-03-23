@@ -565,11 +565,7 @@ async function lancerAgent() {
       const sheetNum = sheetMap[tab];
       if (sheetNum === undefined) continue;
 
-      // Title row (row 0) — full width merge + navy bg
-      fmtReqs.push({ mergeCells: {
-        range: { sheetId: sheetNum, startRowIndex: 0, endRowIndex: 1, startColumnIndex: 0, endColumnIndex: COLS },
-        mergeType: 'MERGE_ALL'
-      }});
+      // Title row (row 0)
       fmtReqs.push({ repeatCell: {
         range: { sheetId: sheetNum, startRowIndex: 0, endRowIndex: 1, startColumnIndex: 0, endColumnIndex: COLS },
         cell: { userEnteredFormat: {
@@ -581,11 +577,7 @@ async function lancerAgent() {
         fields: 'userEnteredFormat(backgroundColor,textFormat,verticalAlignment,horizontalAlignment,padding)'
       }});
 
-      // Row 1 (date) — merge + lighter navy
-      fmtReqs.push({ mergeCells: {
-        range: { sheetId: sheetNum, startRowIndex: 1, endRowIndex: 2, startColumnIndex: 0, endColumnIndex: COLS },
-        mergeType: 'MERGE_ALL'
-      }});
+      // Row 1 (date)
       fmtReqs.push({ repeatCell: {
         range: { sheetId: sheetNum, startRowIndex: 1, endRowIndex: 2, startColumnIndex: 0, endColumnIndex: COLS },
         cell: { userEnteredFormat: {
@@ -645,10 +637,7 @@ async function lancerAgent() {
 
       for (const street of sortedStreets) {
         // Street separator — blue-gray merged
-        fmtReqs.push({ mergeCells: {
-          range: { sheetId: sheetNum, startRowIndex: rowIdx, endRowIndex: rowIdx+1, startColumnIndex: 0, endColumnIndex: COLS },
-          mergeType: 'MERGE_ALL'
-        }});
+
         fmtReqs.push({ repeatCell: {
           range: { sheetId: sheetNum, startRowIndex: rowIdx, endRowIndex: rowIdx+1, startColumnIndex: 0, endColumnIndex: COLS },
           cell: { userEnteredFormat: {
