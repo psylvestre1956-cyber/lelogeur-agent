@@ -194,8 +194,16 @@ function parseExcel(rows) {
   let currentAddr = null;
   let currentAgents = [];
   let currentUnits = [];
+  const today = new Date(); today.setHours(0,0,0,0);
   const addrPattern = /\(Québec\)|,\s*(Laval|Montreal|Montréal|Terrebonne|Boisbriand|Lachenaie|Mirabel|Rosemère|Charlemagne|L'Assomption)/;
   const agentNames = ['Josée','josée','Maria','maria','Isabelle','isabelle','Lina','lina','Janie','janie','Myriam','myriam','Ophélie','ophelie','ophélie','Repris','repris'];
+
+  // Manual agent overrides by address keyword
+  const agentOverrides = [
+    { pattern: /100.*Pom|100.*Pomér/i, agents: ['Josée'] },
+    { pattern: /1102.*Grand-Pic|1104.*Grand-Pic|1110.*Grand-Pic|1146.*Grand-Pic/i, agents: ['Janie','Isabelle'] },
+    { pattern: /788.*Mont-Laval/i, agents: ['Myriam'] },
+  ];
 
   function cleanAddr(text) {
     const lines = String(text).split('\n');
@@ -227,6 +235,45 @@ function parseExcel(rows) {
     }).filter(a => a);
   }
 
+  // Parse a date string like "1 juil. 2026", "22 mars 2026", "1 avr. 2026"
+  function parseDispoDate(str) {
+    if (!str) return null;
+    const months = { jan:0, fév:1, mars:2, avr:3, mai:4, juin:5, juil:6, août:7, sep:8, oct:9, nov:10, déc:11 };
+    const m = str.match(/(\d+)\s+(\w+)\.?\s+(\d{4})/);
+    if (!m) return null;
+    const mo = months[m[2].toLowerCase().substring(0,4).replace('.','')];
+    if (mo === undefined) return null;
+    return new Date(parseInt(m[3]), mo, parseInt(m[1]));
+  }
+
+  function formatDispo(str) {
+    if (!str) return '';
+    const d = parseDispoDate(str);
+    if (d && d < today) return 'VACANT';
+    return str;
+  }
+
+  function extractUnitData(cells) {
+    let locataire = '', telephone = '', loyer = '', dispo = '', pieces = '';
+    for (const cell of cells) {
+      const cs = String(cell);
+      if (/Locataires/.test(cs)) {
+        locataire = cs.split('\n').filter(l => l && !/Locataires/.test(l)).join(', ');
+      } else if (/^[CD] :/.test(cs)) {
+        telephone = telephone ? telephone + ' / ' + cs.replace(/\n/g, ' / ') : cs.replace(/\n/g, ' / ');
+      } else if (/\$/.test(cs) && !/mois/.test(cs)) {
+        loyer = cs;
+      } else if (/^\d+ (juil|juin|mai|avr|mars|fév|jan|août|sep|oct|nov|déc)/.test(cs)) {
+        dispo = formatDispo(cs);
+      } else if (/^\d+ ½$|^[\d½\s]+½$/.test(cs.trim())) {
+        pieces = cs.trim();
+      }
+    }
+    return { locataire, telephone, loyer, dispo, pieces };
+  }
+
+  const badApts = ['Liste des unités', 'Appartement', 'Condominium', 'Identification', 'Apparte'];
+
   for (let i = 0; i < rows.length; i++) {
     const row = rows[i];
     const cells = row.filter(c => c !== '' && c !== null && c !== undefined);
@@ -234,58 +281,70 @@ function parseExcel(rows) {
 
     const first = String(cells[0]);
 
-    // Check if address row
+    // Address row
     if (addrPattern.test(first)) {
       if (currentAddr && currentUnits.length > 0) {
         buildings.push({ adresse: currentAddr, agents: currentAgents, rue: getStreet(currentAddr), unites: currentUnits });
       }
       currentAddr = cleanAddr(first);
-      currentAgents = [];
-      // Look for agents in same row
-      for (let ci = 1; ci < cells.length; ci++) {
-        const cell = String(cells[ci]);
-        if (agentNames.some(n => cell.toLowerCase().includes(n.toLowerCase()))) {
-          currentAgents = parseAgents(cell);
-          break;
+
+      // Check agent overrides first
+      let overrideAgents = null;
+      for (const ov of agentOverrides) {
+        if (ov.pattern.test(currentAddr)) { overrideAgents = ov.agents; break; }
+      }
+
+      currentAgents = overrideAgents || [];
+      if (!overrideAgents) {
+        for (let ci = 1; ci < cells.length; ci++) {
+          const cell = String(cells[ci]);
+          if (agentNames.some(n => cell.toLowerCase().includes(n.toLowerCase()))) {
+            currentAgents = parseAgents(cell);
+            break;
+          }
         }
       }
       currentUnits = [];
       continue;
     }
 
-    // Skip header/summary rows
     if (!currentAddr) continue;
     if (/^(Appartement|Liste des unités|Unités loués|Total)/.test(first)) continue;
     if (/^\d+ Unités/.test(first)) continue;
 
-    // Unit row detection
+    const isBailOnly = /^Bail \(\d+\)$/.test(first.trim());
     const bailMatch = first.match(/Bail \((\d+)\)/);
     const aptLine = first.split('\n')[0].trim();
-    const isUnit = bailMatch || (/^[\d\w,\s-]+$/.test(aptLine) && aptLine.length < 25 && !/^(Appartement|Locataire|Téléphone|Loyer|Disponible|Pièces|Liste)/.test(aptLine));
+    const isUnit = !isBailOnly && (bailMatch || (/^[\d\w,\s-]+$/.test(aptLine) && aptLine.length < 25 && !/^(Appartement|Locataire|Téléphone|Loyer|Disponible|Pièces|Liste)/.test(aptLine)));
+
+    if (isBailOnly) {
+      // Merge into last unit
+      if (currentUnits.length > 0) {
+        const last = currentUnits[currentUnits.length - 1];
+        const data = extractUnitData(cells.slice(1));
+        if (!last.locataire && data.locataire) last.locataire = data.locataire;
+        if (!last.telephone && data.telephone) last.telephone = data.telephone;
+        if (!last.loyer_prevu && data.loyer) last.loyer_prevu = data.loyer;
+        if (!last.disponible && data.dispo) last.disponible = data.dispo;
+        if (!last.pieces && data.pieces) last.pieces = data.pieces;
+      }
+      continue;
+    }
 
     if (isUnit) {
       const apt = aptLine;
-      let locataire = '', telephone = '', loyer = '', dispo = '', pieces = '';
+      // Also handle "apt\nBail(xxx)" combined cells
+      const data = extractUnitData(cells.slice(1));
 
-      for (const cell of cells.slice(1)) {
-        const cs = String(cell);
-        if (/Locataires/.test(cs)) {
-          locataire = cs.split('\n').filter(l => l && !/Locataires/.test(l)).join(', ');
-        } else if (/^[CD] :/.test(cs)) {
-          telephone = cs.replace(/\n/g, ' / ');
-        } else if (/\$/.test(cs) && !/mois/.test(cs)) {
-          loyer = cs;
-        } else if (/^\d+ (juil|juin|mai|avr|mars|fév|jan|août|sep|oct|nov|déc)/.test(cs)) {
-          dispo = cs;
-        } else if (/^\d+ ½$|^[\d½\s]+½$/.test(cs.trim())) {
-          pieces = cs.trim();
-        }
-      }
-
-      // Filter garbage rows
-      const badApts = ['Liste des unités', 'Appartement', 'Condominium', 'Identification', 'Apparte'];
       if (apt && !badApts.includes(apt) && !apt.startsWith('Stationnement')) {
-        currentUnits.push({ appartement: apt, locataire, telephone, loyer_prevu: loyer, disponible: dispo, pieces });
+        currentUnits.push({
+          appartement: apt,
+          locataire: data.locataire,
+          telephone: data.telephone,
+          loyer_prevu: data.loyer,
+          disponible: data.dispo,
+          pieces: data.pieces
+        });
       }
     }
   }
@@ -489,6 +548,17 @@ async function lancerAgent() {
     // Build formatting requests
     const fmtReqs = [];
 
+    // Style constants matching the Google Sheet reference
+    const HEADER_BG   = { red: 0.18, green: 0.24, blue: 0.42 }; // dark navy blue
+    const HEADER_TXT  = { red: 1, green: 1, blue: 1 };
+    const PINK_ROW    = { red: 1.0, green: 0.90, blue: 0.90 };   // light pink
+    const WHITE_ROW   = { red: 1, green: 1, blue: 1 };
+    const STREET_BG   = { red: 0.85, green: 0.88, blue: 0.96 };  // light blue-gray
+    const BORDER_CLR  = { red: 0.70, green: 0.70, blue: 0.75 };
+    const TITLE_BG    = { red: 0.22, green: 0.29, blue: 0.50 };  // slightly lighter navy
+    const VACANT_CLR  = { red: 0.85, green: 0.10, blue: 0.10 };  // red for VACANT
+    const COLS = 7;
+
     for (const agentKey of agentKeys) {
       const buildings = agentGroups[agentKey];
       const streetGroups = groupByStreet(buildings);
@@ -496,41 +566,72 @@ async function lancerAgent() {
       const sheetNum = sheetMap[tab];
       if (sheetNum === undefined) continue;
 
-      const color = getAgentColor(agentKey);
-      const hdrBg = hexToRgb(color.bg);
-      const lightBg = hexToRgb(color.light);
-      const streetBg = { red: 0.93, green: 0.93, blue: 0.95 };
-      const white = { red: 1, green: 1, blue: 1 };
-      const borderColor = { red: 0.82, green: 0.82, blue: 0.85 };
-      const COLS = 7;
-
-      // Title row (row 0)
+      // Title row (row 0) — full width merge + navy bg
+      fmtReqs.push({ mergeCells: {
+        range: { sheetId: sheetNum, startRowIndex: 0, endRowIndex: 1, startColumnIndex: 0, endColumnIndex: COLS },
+        mergeType: 'MERGE_ALL'
+      }});
       fmtReqs.push({ repeatCell: {
         range: { sheetId: sheetNum, startRowIndex: 0, endRowIndex: 1, startColumnIndex: 0, endColumnIndex: COLS },
-        cell: { userEnteredFormat: { backgroundColor: hdrBg, textFormat: { foregroundColor: white, bold: true, fontSize: 12 }, verticalAlignment: 'MIDDLE' }},
-        fields: 'userEnteredFormat(backgroundColor,textFormat,verticalAlignment)'
+        cell: { userEnteredFormat: {
+          backgroundColor: TITLE_BG,
+          textFormat: { foregroundColor: HEADER_TXT, bold: true, fontSize: 13 },
+          verticalAlignment: 'MIDDLE', horizontalAlignment: 'LEFT',
+          padding: { top: 8, bottom: 8, left: 10, right: 10 }
+        }},
+        fields: 'userEnteredFormat(backgroundColor,textFormat,verticalAlignment,horizontalAlignment,padding)'
       }});
 
-      // Header row (row 3)
+      // Row 1 (date) — merge + lighter navy
+      fmtReqs.push({ mergeCells: {
+        range: { sheetId: sheetNum, startRowIndex: 1, endRowIndex: 2, startColumnIndex: 0, endColumnIndex: COLS },
+        mergeType: 'MERGE_ALL'
+      }});
+      fmtReqs.push({ repeatCell: {
+        range: { sheetId: sheetNum, startRowIndex: 1, endRowIndex: 2, startColumnIndex: 0, endColumnIndex: COLS },
+        cell: { userEnteredFormat: {
+          backgroundColor: TITLE_BG,
+          textFormat: { foregroundColor: { red:0.8, green:0.85, blue:1 }, fontSize: 10 },
+          verticalAlignment: 'MIDDLE', horizontalAlignment: 'LEFT'
+        }},
+        fields: 'userEnteredFormat(backgroundColor,textFormat,verticalAlignment,horizontalAlignment)'
+      }});
+
+      // Header row (row 3) — dark navy + white bold centered
       fmtReqs.push({ repeatCell: {
         range: { sheetId: sheetNum, startRowIndex: 3, endRowIndex: 4, startColumnIndex: 0, endColumnIndex: COLS },
-        cell: { userEnteredFormat: { backgroundColor: hdrBg, textFormat: { foregroundColor: white, bold: true, fontSize: 10 }, verticalAlignment: 'MIDDLE', horizontalAlignment: 'CENTER' }},
-        fields: 'userEnteredFormat(backgroundColor,textFormat,verticalAlignment,horizontalAlignment)'
+        cell: { userEnteredFormat: {
+          backgroundColor: HEADER_BG,
+          textFormat: { foregroundColor: HEADER_TXT, bold: true, fontSize: 10 },
+          verticalAlignment: 'MIDDLE', horizontalAlignment: 'CENTER',
+          wrapStrategy: 'WRAP'
+        }},
+        fields: 'userEnteredFormat(backgroundColor,textFormat,verticalAlignment,horizontalAlignment,wrapStrategy)'
       }});
 
       // Border under header
       fmtReqs.push({ updateBorders: {
         range: { sheetId: sheetNum, startRowIndex: 3, endRowIndex: 4, startColumnIndex: 0, endColumnIndex: COLS },
-        bottom: { style: 'SOLID_MEDIUM', width: 2, color: { red:0.2, green:0.2, blue:0.2 } }
+        bottom: { style: 'SOLID_MEDIUM', width: 2, color: { red:0.1, green:0.1, blue:0.3 } },
+        top:    { style: 'SOLID_MEDIUM', width: 2, color: { red:0.1, green:0.1, blue:0.3 } },
+        left:   { style: 'SOLID', width: 1, color: BORDER_CLR },
+        right:  { style: 'SOLID', width: 1, color: BORDER_CLR },
+        innerVertical: { style: 'SOLID', width: 1, color: BORDER_CLR }
       }});
 
       // Column widths: Adresse, Apt, Locataire, Téléphone, Loyer, Disponible, Pièces
-      [200, 110, 200, 175, 110, 110, 65].forEach((w, i) => {
+      [210, 110, 210, 180, 110, 110, 65].forEach((w, i) => {
         fmtReqs.push({ updateDimensionProperties: {
           range: { sheetId: sheetNum, dimension: 'COLUMNS', startIndex: i, endIndex: i+1 },
           properties: { pixelSize: w }, fields: 'pixelSize'
         }});
       });
+
+      // Row height for header
+      fmtReqs.push({ updateDimensionProperties: {
+        range: { sheetId: sheetNum, dimension: 'ROWS', startIndex: 3, endIndex: 4 },
+        properties: { pixelSize: 36 }, fields: 'pixelSize'
+      }});
 
       // Freeze 4 rows
       fmtReqs.push({ updateSheetProperties: {
@@ -538,42 +639,71 @@ async function lancerAgent() {
         fields: 'gridProperties.frozenRowCount'
       }});
 
-      // Data rows formatting
+      // Data rows
       let rowIdx = 4;
       let dataCount = 0;
       const sortedStreets = Object.keys(streetGroups).sort();
 
       for (const street of sortedStreets) {
-        // Street header
-        fmtReqs.push({ repeatCell: {
-          range: { sheetId: sheetNum, startRowIndex: rowIdx, endRowIndex: rowIdx+1, startColumnIndex: 0, endColumnIndex: COLS },
-          cell: { userEnteredFormat: { backgroundColor: streetBg, textFormat: { bold: true, fontSize: 10 }, verticalAlignment: 'MIDDLE' }},
-          fields: 'userEnteredFormat(backgroundColor,textFormat,verticalAlignment)'
-        }});
-        // Merge street header across all columns
+        // Street separator — blue-gray merged
         fmtReqs.push({ mergeCells: {
           range: { sheetId: sheetNum, startRowIndex: rowIdx, endRowIndex: rowIdx+1, startColumnIndex: 0, endColumnIndex: COLS },
           mergeType: 'MERGE_ALL'
+        }});
+        fmtReqs.push({ repeatCell: {
+          range: { sheetId: sheetNum, startRowIndex: rowIdx, endRowIndex: rowIdx+1, startColumnIndex: 0, endColumnIndex: COLS },
+          cell: { userEnteredFormat: {
+            backgroundColor: STREET_BG,
+            textFormat: { bold: true, fontSize: 10, foregroundColor: { red:0.15, green:0.20, blue:0.40 } },
+            verticalAlignment: 'MIDDLE', horizontalAlignment: 'LEFT',
+            padding: { left: 8 }
+          }},
+          fields: 'userEnteredFormat(backgroundColor,textFormat,verticalAlignment,horizontalAlignment,padding)'
+        }});
+        fmtReqs.push({ updateBorders: {
+          range: { sheetId: sheetNum, startRowIndex: rowIdx, endRowIndex: rowIdx+1, startColumnIndex: 0, endColumnIndex: COLS },
+          top:    { style: 'SOLID_MEDIUM', width: 2, color: { red:0.18, green:0.24, blue:0.42 } },
+          bottom: { style: 'SOLID', width: 1, color: BORDER_CLR }
         }});
         rowIdx++;
 
         for (const b of streetGroups[street]) {
           for (const u of b.unites) {
-            const isEven = dataCount % 2 === 0;
-            const rowBg = isEven ? white : lightBg;
+            const isPink = dataCount % 2 !== 0;
+            const rowBg = isPink ? PINK_ROW : WHITE_ROW;
+
             fmtReqs.push({ repeatCell: {
               range: { sheetId: sheetNum, startRowIndex: rowIdx, endRowIndex: rowIdx+1, startColumnIndex: 0, endColumnIndex: COLS },
-              cell: { userEnteredFormat: { backgroundColor: rowBg, textFormat: { fontSize: 10 }, verticalAlignment: 'MIDDLE' }},
+              cell: { userEnteredFormat: {
+                backgroundColor: rowBg,
+                textFormat: { fontSize: 10 },
+                verticalAlignment: 'MIDDLE'
+              }},
               fields: 'userEnteredFormat(backgroundColor,textFormat,verticalAlignment)'
             }});
-            // Vertical borders between columns
+
+            // All borders (vertical separators between columns)
             fmtReqs.push({ updateBorders: {
               range: { sheetId: sheetNum, startRowIndex: rowIdx, endRowIndex: rowIdx+1, startColumnIndex: 0, endColumnIndex: COLS },
-              bottom: { style: 'SOLID', width: 1, color: borderColor },
-              innerVertical: { style: 'SOLID', width: 1, color: borderColor },
-              left: { style: 'SOLID', width: 1, color: borderColor },
-              right: { style: 'SOLID', width: 1, color: borderColor }
+              bottom:        { style: 'SOLID', width: 1, color: BORDER_CLR },
+              top:           { style: 'SOLID', width: 1, color: BORDER_CLR },
+              left:          { style: 'SOLID', width: 1, color: BORDER_CLR },
+              right:         { style: 'SOLID', width: 1, color: BORDER_CLR },
+              innerVertical: { style: 'SOLID', width: 1, color: BORDER_CLR }
             }});
+
+            // Color VACANT cells red
+            if (u.disponible === 'VACANT') {
+              fmtReqs.push({ repeatCell: {
+                range: { sheetId: sheetNum, startRowIndex: rowIdx, endRowIndex: rowIdx+1, startColumnIndex: 5, endColumnIndex: 6 },
+                cell: { userEnteredFormat: {
+                  textFormat: { foregroundColor: VACANT_CLR, bold: true, fontSize: 10 },
+                  horizontalAlignment: 'CENTER'
+                }},
+                fields: 'userEnteredFormat(textFormat,horizontalAlignment)'
+              }});
+            }
+
             rowIdx++;
             dataCount++;
           }
