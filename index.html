@@ -177,11 +177,7 @@ function connecterGoogle() {
   btn.disabled = true;
   document.getElementById('auth-text').textContent = 'Ouverture...';
 
-  // Si pas de vrai Client ID, afficher instructions
-  if (if (CLIENT_ID === 'VOTRE_CLIENT_ID.apps.googleusercontent.com') {) {
-    afficherInstructions();
-    return;
-  }
+
 
   const params = new URLSearchParams({
     client_id: CLIENT_ID,
