@@ -79,7 +79,7 @@
 <div class="glow"></div>
 <div class="wrap">
   <div class="header">
-    <div class="badge">LeLogeur — Agent v5</div>
+    <div class="badge">LeLogeur — Agent v4</div>
     <h1>Appartements<br><span>→ Google Sheets</span></h1>
     <p class="subtitle">Upload ton Excel · Par agent · Regroupé par rue · Anti-doublons</p>
   </div>
@@ -430,7 +430,7 @@ function setProgress(pct, label) {
 function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 
 async function sheetsAPI(method, path, body) {
-  const res = await fetch('https://sheets.googleapis.com/v5/spreadsheets/' + path, {
+  const res = await fetch('https://sheets.googleapis.com/v4/spreadsheets/' + path, {
     method,
     headers: { 'Authorization': 'Bearer ' + accessToken, 'Content-Type': 'application/json' },
     body: body ? JSON.stringify(body) : undefined
