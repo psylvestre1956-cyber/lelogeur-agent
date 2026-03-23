@@ -503,7 +503,7 @@ async function lancerAgent() {
       rows.push([`Agent(s) : ${agentKey}`, '', '', '', '', '', '']);
       rows.push(['Mise à jour : ' + new Date().toLocaleDateString('fr-CA'), '', '', '', '', '', '']);
       rows.push(['', '', '', '', '', '', '']);
-      rows.push(['Adresse', 'Appartement', 'Locataire', 'Téléphone', 'Loyer prévu', 'Disponible', 'Pièces']);
+      rows.push(['Adresse', 'Appartement', 'Locataire', 'Téléphone', 'Loyer prévu', 'Disponible']);
 
       const sortedStreets = Object.keys(streetGroups).sort();
       for (const street of sortedStreets) {
@@ -516,8 +516,7 @@ async function lancerAgent() {
               u.locataire || '',
               u.telephone || '',
               u.loyer_prevu || '',
-              u.disponible || '',
-              u.pieces || ''
+              u.disponible || ''
             ]);
           }
         }
@@ -549,15 +548,15 @@ async function lancerAgent() {
     const fmtReqs = [];
 
     // Style constants matching the Google Sheet reference
-    const HEADER_BG   = { red: 0.18, green: 0.24, blue: 0.42 }; // dark navy blue
-    const HEADER_TXT  = { red: 1, green: 1, blue: 1 };
-    const PINK_ROW    = { red: 1.0, green: 0.90, blue: 0.90 };   // light pink
+    const HEADER_BG   = { red: 1.0, green: 0.85, blue: 0.90 }; // pink
+    const HEADER_TXT  = { red: 0.1, green: 0.1, blue: 0.2 };
+    const PINK_ROW    = { red: 1.0, green: 1.0, blue: 1.0 };   // white
     const WHITE_ROW   = { red: 1, green: 1, blue: 1 };
     const STREET_BG   = { red: 0.85, green: 0.88, blue: 0.96 };  // light blue-gray
     const BORDER_CLR  = { red: 0.70, green: 0.70, blue: 0.75 };
-    const TITLE_BG    = { red: 0.22, green: 0.29, blue: 0.50 };  // slightly lighter navy
+    const TITLE_BG    = { red: 1.0, green: 0.85, blue: 0.90 };  // pink
     const VACANT_CLR  = { red: 0.85, green: 0.10, blue: 0.10 };  // red for VACANT
-    const COLS = 7;
+    const COLS = 6;
 
     for (const agentKey of agentKeys) {
       const buildings = agentGroups[agentKey];
@@ -591,7 +590,7 @@ async function lancerAgent() {
         range: { sheetId: sheetNum, startRowIndex: 1, endRowIndex: 2, startColumnIndex: 0, endColumnIndex: COLS },
         cell: { userEnteredFormat: {
           backgroundColor: TITLE_BG,
-          textFormat: { foregroundColor: { red:0.8, green:0.85, blue:1 }, fontSize: 10 },
+          textFormat: { foregroundColor: { red:0.2, green:0.2, blue:0.3 }, fontSize: 10 },
           verticalAlignment: 'MIDDLE', horizontalAlignment: 'LEFT'
         }},
         fields: 'userEnteredFormat(backgroundColor,textFormat,verticalAlignment,horizontalAlignment)'
@@ -612,15 +611,15 @@ async function lancerAgent() {
       // Border under header
       fmtReqs.push({ updateBorders: {
         range: { sheetId: sheetNum, startRowIndex: 3, endRowIndex: 4, startColumnIndex: 0, endColumnIndex: COLS },
-        bottom: { style: 'SOLID_MEDIUM', width: 2, color: { red:0.1, green:0.1, blue:0.3 } },
-        top:    { style: 'SOLID_MEDIUM', width: 2, color: { red:0.1, green:0.1, blue:0.3 } },
+        bottom: { style: 'SOLID_MEDIUM', width: 2, color: { red:0.6, green:0.2, blue:0.3 } },
+        top:    { style: 'SOLID_MEDIUM', width: 2, color: { red:0.6, green:0.2, blue:0.3 } },
         left:   { style: 'SOLID', width: 1, color: BORDER_CLR },
         right:  { style: 'SOLID', width: 1, color: BORDER_CLR },
         innerVertical: { style: 'SOLID', width: 1, color: BORDER_CLR }
       }});
 
       // Column widths: Adresse, Apt, Locataire, Téléphone, Loyer, Disponible, Pièces
-      [210, 110, 210, 180, 110, 110, 65].forEach((w, i) => {
+      [210, 110, 210, 180, 110, 110].forEach((w, i) => {
         fmtReqs.push({ updateDimensionProperties: {
           range: { sheetId: sheetNum, dimension: 'COLUMNS', startIndex: i, endIndex: i+1 },
           properties: { pixelSize: w }, fields: 'pixelSize'
@@ -669,7 +668,7 @@ async function lancerAgent() {
 
         for (const b of streetGroups[street]) {
           for (const u of b.unites) {
-            const isPink = dataCount % 2 !== 0;
+            const isPink = false; // all white
             const rowBg = isPink ? PINK_ROW : WHITE_ROW;
 
             fmtReqs.push({ repeatCell: {
