@@ -87,11 +87,13 @@
   <!-- ÉTAPE 1 : Fichier Excel -->
   <div class="card">
     <div class="card-label">Étape 1 — Fichier Excel</div>
-    <div class="drop-zone" id="drop-zone">
-      <input type="file" accept=".xls,.xlsx" onchange="chargerFichier(this.files[0])">
-      <div class="drop-icon">📂</div>
-      <div class="drop-text">Glisse ton fichier Excel ici</div>
-      <div class="drop-sub">ou clique pour choisir · .xls ou .xlsx</div>
+    <div style="display:flex;flex-direction:column;gap:12px;">
+      <label for="file-input" style="display:block;background:var(--bg);border:2px dashed var(--border);border-radius:10px;padding:28px 20px;text-align:center;cursor:pointer;transition:border-color 0.2s;" id="drop-zone" ondragover="event.preventDefault();this.style.borderColor='var(--accent)'" ondragleave="this.style.borderColor='var(--border)'" ondrop="event.preventDefault();this.style.borderColor='var(--border)';chargerFichier(event.dataTransfer.files[0])">
+        <div class="drop-icon" id="drop-icon">📂</div>
+        <div class="drop-text" id="drop-text">Clique ici pour choisir ton fichier Excel</div>
+        <div class="drop-sub" id="drop-sub">.xls ou .xlsx</div>
+      </label>
+      <input type="file" id="file-input" accept=".xls,.xlsx" style="display:none;" onchange="chargerFichier(this.files[0])">
     </div>
     <div class="stats-row" id="file-stats" style="display:none;">
       <div class="stat"><div class="stat-num" id="stat-bat">0</div><div class="stat-label">Bâtiments</div></div>
@@ -160,7 +162,7 @@ function getAgentColor(agentKey) {
 async function chargerFichier(file) {
   if (!file) return;
   const zone = document.getElementById('drop-zone');
-  zone.querySelector('.drop-text').textContent = '⏳ Lecture en cours...';
+  document.getElementById('drop-text').textContent = '⏳ Lecture en cours...';
 
   try {
     // Support both .xls and .xlsx
@@ -170,7 +172,7 @@ async function chargerFichier(file) {
     const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '', raw: false });
 
     if (rows.length === 0) {
-      zone.querySelector('.drop-text').textContent = '❌ Fichier vide ou illisible';
+      document.getElementById('drop-text').textContent = '❌ Fichier vide ou illisible';
       return;
     }
 
@@ -185,18 +187,18 @@ async function chargerFichier(file) {
   document.getElementById('stat-unites').textContent = totalUnits;
   document.getElementById('file-stats').style.display = 'grid';
 
-  zone.classList.add('file-loaded');
-  zone.querySelector('.drop-icon').textContent = '✅';
-  zone.querySelector('.drop-text').textContent = file.name;
-  zone.querySelector('.drop-sub').textContent = parsedBuildings.length + ' bâtiments · ' + totalUnits + ' unités';
+  document.getElementById('drop-zone').style.borderColor = 'var(--accent2)';
+  document.getElementById('drop-icon').textContent = '✅';
+  document.getElementById('drop-text').textContent = file.name;
+  document.getElementById('drop-sub').textContent = parsedBuildings.length + ' bâtiments · ' + totalUnits + ' unités';
 
     // Enable step 2
     document.getElementById('card2').style.opacity = '1';
     document.getElementById('card2').style.pointerEvents = 'auto';
     document.getElementById('card4').style.opacity = '1';
   } catch(e) {
-    zone.querySelector('.drop-text').textContent = '❌ Erreur: ' + e.message;
-    zone.querySelector('.drop-icon').textContent = '⚠️';
+    document.getElementById('drop-text').textContent = '❌ Erreur: ' + e.message;
+    document.getElementById('drop-icon').textContent = '⚠️';
     console.error('Erreur chargement Excel:', e);
   }
 }
