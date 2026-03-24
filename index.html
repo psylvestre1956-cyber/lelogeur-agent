@@ -162,12 +162,19 @@ async function chargerFichier(file) {
   const zone = document.getElementById('drop-zone');
   zone.querySelector('.drop-text').textContent = '⏳ Lecture en cours...';
 
-  const data = await file.arrayBuffer();
-  const wb = XLSX.read(data, { type: 'array' });
-  const ws = wb.Sheets[wb.SheetNames[0]];
-  const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
+  try {
+    // Support both .xls and .xlsx
+    const data = await file.arrayBuffer();
+    const wb = XLSX.read(data, { type: 'array', cellText: true, cellDates: true });
+    const ws = wb.Sheets[wb.SheetNames[0]];
+    const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '', raw: false });
 
-  parsedBuildings = parseExcel(rows);
+    if (rows.length === 0) {
+      zone.querySelector('.drop-text').textContent = '❌ Fichier vide ou illisible';
+      return;
+    }
+
+    parsedBuildings = parseExcel(rows);
 
   const agentGroups = groupByAgent(parsedBuildings);
   const totalUnits = parsedBuildings.reduce((s, b) => s + b.unites.length, 0);
@@ -183,10 +190,15 @@ async function chargerFichier(file) {
   zone.querySelector('.drop-text').textContent = file.name;
   zone.querySelector('.drop-sub').textContent = parsedBuildings.length + ' bâtiments · ' + totalUnits + ' unités';
 
-  // Enable step 2
-  document.getElementById('card2').style.opacity = '1';
-  document.getElementById('card2').style.pointerEvents = 'auto';
-  document.getElementById('card4').style.opacity = '1';
+    // Enable step 2
+    document.getElementById('card2').style.opacity = '1';
+    document.getElementById('card2').style.pointerEvents = 'auto';
+    document.getElementById('card4').style.opacity = '1';
+  } catch(e) {
+    zone.querySelector('.drop-text').textContent = '❌ Erreur: ' + e.message;
+    zone.querySelector('.drop-icon').textContent = '⚠️';
+    console.error('Erreur chargement Excel:', e);
+  }
 }
 
 function parseExcel(rows) {
