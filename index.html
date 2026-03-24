@@ -500,16 +500,18 @@ async function lancerAgent() {
       const tab = agentKey.substring(0, 30);
       const rows = [];
 
-      rows.push([`Agent(s) : ${agentKey}`, '', '', '', '', '', '']);
-      rows.push(['Mise à jour : ' + new Date().toLocaleDateString('fr-CA'), '', '', '', '', '', '']);
-      rows.push(['', '', '', '', '', '', '']);
+      rows.push([`Agent(s) : ${agentKey}`, '', '', '', '', '']);
+      rows.push(['Mise à jour : ' + new Date().toLocaleDateString('fr-CA'), '', '', '', '', '']);
+      rows.push(['', '', '', '', '', '']);
       rows.push(['Adresse', 'Appartement', 'Locataire', 'Téléphone', 'Loyer prévu', 'Disponible']);
 
       const sortedStreets = Object.keys(streetGroups).sort();
       for (const street of sortedStreets) {
-        rows.push([`📍 ${street}`, '', '', '', '', '', '']);
+        rows.push([`📍 ${street}`, '', '', '', '', '']);
         for (const b of streetGroups[street]) {
           for (const u of b.unites) {
+            // Skip truly empty units
+            if (!u.appartement && !u.locataire && !u.loyer_prevu) continue;
             rows.push([
               b.adresse.split(',').slice(1).join(',').trim().substring(0, 50),
               u.appartement || '',
@@ -520,7 +522,7 @@ async function lancerAgent() {
             ]);
           }
         }
-        rows.push(['', '', '', '', '', '', '']);
+        rows.push(['', '', '', '', '', '']);
       }
 
       valueUpdates.push({ range: `'${tab}'!A1`, values: rows });
