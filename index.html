@@ -232,7 +232,7 @@ function parseExcel(rows) {
     if (parts.length >= 2) {
       const street = parts[1].trim();
       const city = parts[2] ? parts[2].replace(/\s*\(Québec\).*/, '').trim() : '';
-      return `${street}, ${city}`;
+      return street + ', ' + city;
     }
     return addr;
   }
@@ -509,14 +509,14 @@ async function lancerAgent() {
       const tab = agentKey.substring(0, 30);
       const rows = [];
 
-      rows.push([`Agent(s) : ${agentKey}`, '', '', '', '', '']);
+      rows.push(['Agent(s) : ' + agentKey, '', '', '', '', '']);
       rows.push(['Mise à jour : ' + new Date().toLocaleDateString('fr-CA'), '', '', '', '', '']);
       rows.push(['', '', '', '', '', '']);
       rows.push(['Adresse', 'Appartement', 'Locataire', 'Téléphone', 'Loyer prévu', 'Disponible']);
 
       const sortedStreets = Object.keys(streetGroups).sort();
       for (const street of sortedStreets) {
-        rows.push([`📍 ${street}`, '', '', '', '', '']);
+        rows.push(['📍 ' + street, '', '', '', '', '']);
         for (const b of streetGroups[street]) {
           for (const u of b.unites) {
             // Skip truly empty units
@@ -534,7 +534,7 @@ async function lancerAgent() {
         rows.push(['', '', '', '', '', '']);
       }
 
-      valueUpdates.push({ range: `'${tab}'!A1`, values: rows });
+      valueUpdates.push({ range: "'" + tab + "'!A1", values: rows });
     }
 
     // Send data in batches of 5
@@ -544,7 +544,7 @@ async function lancerAgent() {
         data: valueUpdates.slice(i, i + 5)
       });
       await sleep(300);
-      setProgress(20 + Math.round((i / valueUpdates.length) * 40), `Données ${Math.min(i+5, valueUpdates.length)}/${valueUpdates.length}...`);
+      setProgress(20 + Math.round((i / valueUpdates.length) * 40), 'Données ' + Math.min(i+5, valueUpdates.length) + '/' + valueUpdates.length + '...');
     }
 
     log('✓ Données envoyées!', 'ok');
@@ -726,10 +726,7 @@ async function lancerAgent() {
     log('✓ Lignes alternées + séparations verticales', 'ok');
     log('✓ Regroupé par rue', 'ok');
 
-    document.getElementById('result-area').innerHTML = `
-      <a class="result-link" href="https://docs.google.com/spreadsheets/d/${sheetId}" target="_blank">
-        <span>Ouvrir le Google Sheet ↗</span><span>→</span>
-      </a>`;
+    document.getElementById('result-area').innerHTML = '<a class="result-link" href="https://docs.google.com/spreadsheets/d/' + sheetId + '" target="_blank"><span>Ouvrir le Google Sheet</span><span>→</span></a>';
     document.getElementById('run-text').textContent = '✓ Terminé!';
 
   } catch(e) {
