@@ -254,7 +254,7 @@ function parseExcel(rows) {
   }
 
   function extractUnitData(cells) {
-    let locataire = '', telephone = '', loyer = '', dispo = '', pieces = '';
+    let locataire = '', telephone = '', loyer = '', dispo = '';
     for (const cell of cells) {
       const cs = String(cell);
       if (/Locataires/.test(cs)) {
@@ -265,11 +265,8 @@ function parseExcel(rows) {
         loyer = cs;
       } else if (/^\d+ (juil|juin|mai|avr|mars|fév|jan|août|sep|oct|nov|déc)/.test(cs)) {
         dispo = formatDispo(cs);
-      } else if (/^\d+ ½$|^[\d½\s]+½$/.test(cs.trim())) {
-        pieces = cs.trim();
-      }
     }
-    return { locataire, telephone, loyer, dispo, pieces };
+    return { locataire, telephone, loyer, dispo };
   }
 
   const badApts = ['Liste des unités', 'Appartement', 'Condominium', 'Identification', 'Apparte'];
@@ -326,14 +323,13 @@ function parseExcel(rows) {
         if (!last.telephone && data.telephone) last.telephone = data.telephone;
         if (!last.loyer_prevu && data.loyer) last.loyer_prevu = data.loyer;
         if (!last.disponible && data.dispo) last.disponible = data.dispo;
-        if (!last.pieces && data.pieces) last.pieces = data.pieces;
+
       }
       continue;
     }
 
     if (isUnit) {
       const apt = aptLine;
-      // Also handle "apt\nBail(xxx)" combined cells
       const data = extractUnitData(cells.slice(1));
 
       if (apt && !badApts.includes(apt) && !apt.startsWith('Stationnement')) {
@@ -342,8 +338,7 @@ function parseExcel(rows) {
           locataire: data.locataire,
           telephone: data.telephone,
           loyer_prevu: data.loyer,
-          disponible: data.dispo,
-          pieces: data.pieces
+          disponible: data.dispo
         });
       }
     }
