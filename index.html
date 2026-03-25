@@ -178,21 +178,20 @@ async function chargerFichier(file) {
 
     parsedBuildings = parseExcel(rows);
 
-  const agentGroups = groupByAgent(parsedBuildings);
-  const totalUnits = parsedBuildings.reduce((s, b) => s + b.unites.length, 0);
+    const agentGroups = groupByAgent(parsedBuildings);
+    const totalUnits = parsedBuildings.reduce((s, b) => s + b.unites.length, 0);
 
-  document.getElementById('stat-bat').textContent = parsedBuildings.length;
-  document.getElementById('stat-agents').textContent = Object.keys(agentGroups).length;
-  document.getElementById('stat-onglets').textContent = Object.keys(agentGroups).length;
-  document.getElementById('stat-unites').textContent = totalUnits;
-  document.getElementById('file-stats').style.display = 'grid';
+    document.getElementById('stat-bat').textContent = parsedBuildings.length;
+    document.getElementById('stat-agents').textContent = Object.keys(agentGroups).length;
+    document.getElementById('stat-onglets').textContent = Object.keys(agentGroups).length;
+    document.getElementById('stat-unites').textContent = totalUnits;
+    document.getElementById('file-stats').style.display = 'grid';
 
-  document.getElementById('drop-zone').style.borderColor = 'var(--accent2)';
-  document.getElementById('drop-icon').textContent = '✅';
-  document.getElementById('drop-text').textContent = file.name;
-  document.getElementById('drop-sub').textContent = parsedBuildings.length + ' bâtiments · ' + totalUnits + ' unités';
+    document.getElementById('drop-zone').style.borderColor = 'var(--accent2)';
+    document.getElementById('drop-icon').textContent = '✅';
+    document.getElementById('drop-text').textContent = file.name;
+    document.getElementById('drop-sub').textContent = parsedBuildings.length + ' batiments - ' + totalUnits + ' unites';
 
-    // Enable step 2
     document.getElementById('card2').style.opacity = '1';
     document.getElementById('card2').style.pointerEvents = 'auto';
     document.getElementById('card4').style.opacity = '1';
