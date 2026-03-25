@@ -84,7 +84,7 @@ input[type=text]::placeholder{color:var(--muted);}
 
   <div class="card dim" id="card3">
     <div class="clabel">Etape 3 - ID du Google Sheet</div>
-    <input type="text" id="sheet-id" placeholder="1a5IxEWxm51rbfhgKk-A0NJSpvcd5HqdktE8bauRCIz8">
+    <input type="text" id="sheet-id" placeholder="1a5IxEWxm51rbfhgKk-A0NJSpvcd5HqdktE8bauRCIz8" value="1a5IxEWxm51rbfhgKk-A0NJSpvcd5HqdktE8bauRCIz8">
     <div class="hint">URL : docs.google.com/spreadsheets/d/<code>CET-ID</code>/edit</div>
     <button class="btn" id="btn-run" onclick="lancerAgent()" disabled>Lancer l'agent</button>
   </div>
@@ -150,21 +150,26 @@ function parseDispo(str) {
   return (d < TODAY) ? 'VACANT' : str;
 }
 
+function normalizeAgent(t) {
+  t = t.trim();
+  if (!t) return null;
+  if (/repris/i.test(t)) return 'Repris par le proprio';
+  if (/oph/i.test(t)) return 'Ophelie';
+  if (/jos/i.test(t)) return 'Josee';
+  if (/mari/i.test(t)) return 'Maria';
+  if (/isab/i.test(t)) return 'Isabelle';
+  if (/jani/i.test(t)) return 'Janie';
+  if (/myri/i.test(t)) return 'Myriam';
+  if (/lina/i.test(t)) return 'Lina';
+  return t.charAt(0).toUpperCase() + t.slice(1).toLowerCase();
+}
+
 function parseAgentText(txt) {
   var result = [];
   var parts = String(txt).split(',');
   for (var i = 0; i < parts.length; i++) {
-    var t = parts[i].trim();
-    if (!t) continue;
-    if (/repris/i.test(t)) { result.push('Repris par le proprio'); continue; }
-    if (/oph/i.test(t)) { result.push('Ophelie'); continue; }
-    if (/jos/i.test(t)) { result.push('Josee'); continue; }
-    if (/mari/i.test(t)) { result.push('Maria'); continue; }
-    if (/isab/i.test(t)) { result.push('Isabelle'); continue; }
-    if (/jani/i.test(t)) { result.push('Janie'); continue; }
-    if (/myri/i.test(t)) { result.push('Myriam'); continue; }
-    if (/lina/i.test(t)) { result.push('Lina'); continue; }
-    result.push(t.charAt(0).toUpperCase() + t.slice(1).toLowerCase());
+    var n = normalizeAgent(parts[i]);
+    if (n && result.indexOf(n) < 0) result.push(n);
   }
   return result;
 }
@@ -268,8 +273,9 @@ function parseExcel(rows) {
 
     var aptLine = first.split('\n')[0].trim();
     var isUnit = /Bail\s*\(\d+\)/.test(first) ||
-      (/^[\w\d,\s-]+$/.test(aptLine) && aptLine.length < 30 &&
-       !/^(Appartement|Locataire|T|Loyer|Dispo|Pi|Liste|Statut)/i.test(aptLine));
+      (/^[\w\d,\s\u00c0-\u024f½-]+$/.test(aptLine) && aptLine.length < 35 &&
+       !/^(Appartement|Locataire|T|Loyer|Dispo|Pi|Liste|Statut)/i.test(aptLine) &&
+       /\d/.test(aptLine));
 
     if (isUnit) {
       var bad = false;
