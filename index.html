@@ -104,14 +104,107 @@ var SCOPES = 'https://www.googleapis.com/auth/spreadsheets';
 var token = null;
 var buildings = [];
 
-var AGENT_OVERRIDES = [
-  {re:/100.*Pom/i, agents:['Josee']},
-  {re:/1102.*Grand/i, agents:['Janie','Isabelle']},
-  {re:/1104.*Grand/i, agents:['Janie','Isabelle']},
-  {re:/1110.*Grand/i, agents:['Janie','Isabelle']},
-  {re:/1146.*Grand/i, agents:['Janie','Isabelle']},
-  {re:/788.*Mont-Laval/i, agents:['Myriam']}
-];
+// Complete address -> agents mapping (hardcoded, no need for Excel column)
+var ADDR_AGENTS = {
+  "100 du Pomerol":["Josee"],
+  "1001 Mont-Laval":["Myriam"],
+  "108 Dore-Jaune":["Maria","Janie"],
+  "1100 du Grand-Pic":["Janie","Isabelle"],
+  "1102 du Grand-Pic":["Janie","Isabelle"],
+  "1104 du Grand-Pic":["Janie","Isabelle"],
+  "1110 du Grand-Pic":["Janie","Isabelle"],
+  "1146 du Grand-Pic":["Janie","Isabelle"],
+  "116 Campagnol":["Maria","Janie"],
+  "1165 du Grand-Pic":["Janie","Isabelle"],
+  "1167 du Grand-Pic":["Janie","Isabelle"],
+  "1169 du Grand-Pic":["Janie","Isabelle"],
+  "1171 du Grand-Pic":["Janie","Isabelle"],
+  "1173 du Grand-Pic":["Janie","Isabelle"],
+  "1175 du Grand-Pic":["Janie","Isabelle"],
+  "12339 Treffle-Berthiaume":["Maria"],
+  "12349 Treffle-Berthiaume":["Maria"],
+  "132 Campagnol":["Maria","Isabelle"],
+  "13525 Place du Cantonnier":["Repris par le proprio"],
+  "1360 du Grand-Pic":["Janie","Isabelle"],
+  "1372 du Grand-Pic":["Janie","Isabelle"],
+  "1378 du Grand-Pic":["Janie","Isabelle"],
+  "1450 Montgolfier":["Janie"],
+  "1452 du Grand-Pic":["Janie","Isabelle"],
+  "1456 du Grand-Pic":["Janie","Isabelle"],
+  "1458 du Grand-Pic":["Janie","Isabelle"],
+  "1471 de Ribeira":["Repris par le proprio"],
+  "1473 de Ribeira":["Repris par le proprio"],
+  "1475 de Ribeira":["Repris par le proprio"],
+  "1535 du Grand-Pic":["Janie","Isabelle"],
+  "1555 du Grand-Pic":["Janie","Isabelle"],
+  "1585 du Grand-Pic":["Janie","Isabelle"],
+  "1595 du Grand-Pic":["Janie","Isabelle"],
+  "161 Saule-Noir":["Maria","Janie"],
+  "1655 du Grand-Pic":["Maria","Janie"],
+  "1745 Rue de Plaisance":["Maria","Isabelle"],
+  "2095 Papineau":["Janie"],
+  "2290 de la Jonquille":["Ophelie"],
+  "2303 Dorion":["Janie"],
+  "2330 de la Jonquille":["Ophelie"],
+  "2350 de la Jonquille":["Ophelie"],
+  "257 Montee Sanche":["Josee"],
+  "265 Angele-Chartrand":["Josee"],
+  "269 Angele-Chartrand":["Josee"],
+  "274 Angele-Chartrand":["Josee"],
+  "282 Angele-Chartrand":["Josee"],
+  "289 Angele-Chartrand":["Josee"],
+  "290 Angele-Chartrand":["Josee"],
+  "3187 Dali":["Janie"],
+  "3189 Dali":["Janie"],
+  "322 Angele-Chartrand":["Josee"],
+  "328 Angele-Chartrand":["Josee"],
+  "379 Des Melezes":["Ophelie"],
+  "383 Des Melezes":["Ophelie"],
+  "387 Des Melezes":["Ophelie"],
+  "3875 56 Rue":["Josee"],
+  "489 Verone":["Ophelie"],
+  "4931 Belanger":["Janie"],
+  "499 Verone":["Ophelie"],
+  "509 Verone":["Ophelie"],
+  "60 Picard":["Maria","Janie"],
+  "64 Principale":["Repris par le proprio"],
+  "69 Campagnol":["Maria","Janie"],
+  "699 Peladeau":["Janie"],
+  "72 Principale":["Repris par le proprio"],
+  "75 Campagnol":["Maria","Janie"],
+  "756 Mont-Laval":["Myriam"],
+  "760 Mont-Laval":["Myriam"],
+  "764 Mont-Laval":["Myriam"],
+  "768 Mont-Laval":["Myriam"],
+  "788 Mont-Laval":["Myriam"],
+  "815 Croissant des Roselins":["Janie","Isabelle"],
+  "835 Croissant des Roselins":["Janie","Isabelle"],
+  "837 Croissant des Roselins":["Janie","Isabelle"],
+  "839 Croissant des Roselins":["Janie","Isabelle"],
+  "861 Croissant des Roselins":["Janie","Isabelle"],
+  "871 Croissant des Roselins":["Janie","Isabelle"],
+  "881 Croissant des Roselins":["Janie","Isabelle"],
+  "88 Rue Gary-Carter":["Janie"],
+  "881 Toupin":["Maria"],
+  "90 du Pomerol":["Josee"]
+};
+
+function lookupAgents(addr) {
+  // Normalize: remove accents, lowercase for comparison
+  function norm(s) {
+    return s.toLowerCase()
+      .replace(/[éèêë]/g,'e').replace(/[àâä]/g,'a')
+      .replace(/[îï]/g,'i').replace(/[ôö]/g,'o')
+      .replace(/[ùûü]/g,'u').replace(/[ç]/g,'c');
+  }
+  var nAddr = norm(addr);
+  for (var key in ADDR_AGENTS) {
+    if (nAddr.indexOf(norm(key)) >= 0) {
+      return ADDR_AGENTS[key].slice();
+    }
+  }
+  return null;
+}
 
 var MONTHS = {jan:0,fev:1,mars:2,avr:3,mai:4,juin:5,juil:6,aout:7,sep:8,oct:9,nov:10,dec:11};
 var TODAY = new Date(); TODAY.setHours(0,0,0,0);
@@ -237,14 +330,13 @@ function parseExcel(rows) {
       curAddr = cleanAddr(first);
       curAgents = [];
       curUnits = [];
-      var overridden = false;
-      for (var oi = 0; oi < AGENT_OVERRIDES.length; oi++) {
-        if (AGENT_OVERRIDES[oi].re.test(curAddr)) {
-          curAgents = AGENT_OVERRIDES[oi].agents.slice();
-          overridden = true; break;
-        }
-      }
-      if (!overridden) {
+      // First try hardcoded lookup
+      var looked = lookupAgents(curAddr);
+      if (looked) {
+        curAgents = looked;
+      } else {
+        // Fall back to reading from Excel row
+        curAgents = [];
         for (var ci = 1; ci < cells.length; ci++) {
           if (/Jos|Mari|Isab|Lina|Jani|Myri|Oph|repris/i.test(String(cells[ci]))) {
             curAgents = parseAgentText(String(cells[ci])); break;
