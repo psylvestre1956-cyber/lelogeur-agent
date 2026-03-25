@@ -5,7 +5,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Agent LeLogeur → Google Sheets</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@600;700;800&display=swap" rel="stylesheet">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
   :root {
     --bg: #0e0e11; --surface: #16161b; --border: #2a2a32;
@@ -93,7 +92,7 @@
         <div class="drop-text" id="drop-text">Clique ici pour choisir ton fichier Excel</div>
         <div class="drop-sub" id="drop-sub">.xls ou .xlsx</div>
       </label>
-      <input type="file" id="file-input" accept=".xls,.xlsx" style="display:none;" onchange="chargerFichier(this.files[0])">
+      <input type="file" id="file-input" accept=".xls,.xlsx" style="display:none;" onchange="if(typeof chargerFichier==='function'){chargerFichier(this.files[0])}else{alert('Chargement en cours, réessaie')}">
     </div>
     <div class="stats-row" id="file-stats" style="display:none;">
       <div class="stat"><div class="stat-num" id="stat-bat">0</div><div class="stat-label">Bâtiments</div></div>
@@ -131,6 +130,7 @@
   </div>
 </div>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script>
 const CLIENT_ID = '1048377543224-56s899bif9r7vrvme12uercg0noh87nq.apps.googleusercontent.com';
 const SCOPES = 'https://www.googleapis.com/auth/spreadsheets';
