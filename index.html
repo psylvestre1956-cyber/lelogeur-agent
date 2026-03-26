@@ -415,6 +415,9 @@ function parseExcel(rows) {
       var ud = extractData(cells.slice(1));
       // Clean apt: "269, Angèle-Chartrand" -> "269", "1102, Du Grand Pic" -> "1102"
       var aptFinal = aptClean.replace(/^(\d+[A-Za-z-]?),.*$/, '$1').trim();
+      // If aptFinal matches the building's civic number, it's not a real apt number -> leave empty
+      var civicNum = (curAddr || '').split(',')[0].trim();
+      if (aptFinal === civicNum) aptFinal = '';
       var dedupeKey = (curAddr||'') + '|' + aptFinal + '|' + (ud.loc||'') + '|' + (ud.loyer||'');
       if (!curSeen[dedupeKey]) {
         curSeen[dedupeKey] = true;
