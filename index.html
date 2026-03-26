@@ -377,20 +377,22 @@ function parseExcel(rows) {
     var aptClean = aptLine.replace(/^Appartement\s+/i, '').trim();
     // Skip if it's a full address line (contains city/province info)
     if (ADDR_RE.test(aptLine)) continue;
+    // Skip pure header rows (exact match only, not "Appartement 101")
+    var skipRow = false;
+    for (var si = 0; si < BAD_APTS.length; si++) {
+      if (aptLine === BAD_APTS[si] || aptLine.indexOf(BAD_APTS[si] + '\n') === 0) { skipRow = true; break; }
+    }
+    if (skipRow) continue;
+    if (/^(Locataire|T.l.phone|Loyer|Disponible|Pi.ces|0 Unit)/i.test(aptLine)) continue;
+    if (/^Liste des unit/i.test(aptLine)) continue;
+
     var isUnit = /Bail\s*\(\d+\)/.test(first) ||
       (/^[\w\d,\s\u00c0-\u024f½-]+$/.test(aptClean) && aptClean.length < 35 &&
-       !/^(Locataire|Loyer|Dispo|Pi|Liste|Statut|0 Unit)/i.test(aptClean) &&
        /\d/.test(aptClean));
 
-    if (isUnit) {
-      var bad = false;
-      for (var bi = 0; bi < BAD_APTS.length; bi++) {
-        if (aptClean === BAD_APTS[bi] || aptLine === BAD_APTS[bi]) { bad = true; break; }
-      }
-      if (!bad && !/^Stationnement/i.test(aptClean)) {
-        var ud = extractData(cells.slice(1));
-        curUnits.push({apt:aptClean, loc:ud.loc, tel:ud.tel, loyer:ud.loyer, dispo:ud.dispo});
-      }
+    if (isUnit && !/^Stationnement/i.test(aptClean)) {
+      var ud = extractData(cells.slice(1));
+      curUnits.push({apt:aptClean, loc:ud.loc, tel:ud.tel, loyer:ud.loyer, dispo:ud.dispo});
     }
   }
   save();
