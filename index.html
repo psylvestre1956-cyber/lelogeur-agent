@@ -591,6 +591,7 @@ async function lancerAgent() {
         rows.push(['>>> '+street,'','','','','']);
         sm[street].forEach(function(b) {
           b.unites.forEach(function(u) {
+          if (b.adresse.indexOf('3875') >= 0) { console.log('3875 unit:', u.apt, u.loc, u.loyer); }
             var addr = b.adresse.split(',').slice(1).join(',').trim().substring(0,50);
             rows.push([addr, u.apt||'', u.loc||'', u.tel||'', u.loyer||'', u.dispo||'']);
           });
