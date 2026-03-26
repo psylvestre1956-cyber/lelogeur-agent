@@ -373,19 +373,21 @@ function parseExcel(rows) {
     }
 
     var aptLine = first.split('\n')[0].trim();
+    // Strip "Appartement " prefix -> "Appartement 101" becomes "101"
+    var aptClean = aptLine.replace(/^Appartement\s+/i, '').trim();
     var isUnit = /Bail\s*\(\d+\)/.test(first) ||
-      (/^[\w\d,\s\u00c0-\u024f½-]+$/.test(aptLine) && aptLine.length < 35 &&
-       !/^(Appartement|Locataire|T|Loyer|Dispo|Pi|Liste|Statut)/i.test(aptLine) &&
-       /\d/.test(aptLine));
+      (/^[\w\d,\s\u00c0-\u024f½-]+$/.test(aptClean) && aptClean.length < 35 &&
+       !/^(Locataire|Loyer|Dispo|Pi|Liste|Statut)/i.test(aptClean) &&
+       /\d/.test(aptClean));
 
     if (isUnit) {
       var bad = false;
       for (var bi = 0; bi < BAD_APTS.length; bi++) {
-        if (aptLine === BAD_APTS[bi]) { bad = true; break; }
+        if (aptClean === BAD_APTS[bi] || aptLine === BAD_APTS[bi]) { bad = true; break; }
       }
-      if (!bad && !/^Stationnement/i.test(aptLine)) {
+      if (!bad && !/^Stationnement/i.test(aptClean)) {
         var ud = extractData(cells.slice(1));
-        curUnits.push({apt:aptLine, loc:ud.loc, tel:ud.tel, loyer:ud.loyer, dispo:ud.dispo});
+        curUnits.push({apt:aptClean, loc:ud.loc, tel:ud.tel, loyer:ud.loyer, dispo:ud.dispo});
       }
     }
   }
