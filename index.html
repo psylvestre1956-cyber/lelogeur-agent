@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Agent LeLogeur</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@600;700;800&display=swap" rel="stylesheet">
+<script src="https://accounts.google.com/gsi/client" async defer></script>
 <script>
 // Load XLSX from multiple CDN sources as fallback
 (function() {
@@ -334,7 +335,7 @@ function extractData(cells) {
 
 function parseExcel(rows) {
   var result = [];
-  var curAddr = null, curAgents = [], curUnits = [];
+  var curAddr = null, curAgents = [], curUnits = [], curSeen = {};
 
   function save() {
     if (curAddr && curUnits.length > 0) {
@@ -374,7 +375,9 @@ function parseExcel(rows) {
     }
 
     if (!curAddr) continue;
-    if (/^(Appartement|Liste|Unit.s lou|Total)/i.test(first)) continue;
+    // Skip header rows but NOT "Appartement 101" style unit rows
+    if (/^(Liste|Unit.s lou|Total)/i.test(first)) continue;
+    if (/^Appartement$/i.test(first.split('\n')[0].trim())) continue;
     if (/^\d+\s+Unit/i.test(first)) continue;
 
     var isBailOnly = /^Bail\s*\(\d+\)$/.test(first.trim());
@@ -412,11 +415,19 @@ function parseExcel(rows) {
       var ud = extractData(cells.slice(1));
       // Clean apt: "269, Angèle-Chartrand" -> "269", "1102, Du Grand Pic" -> "1102"
       var aptFinal = aptClean.replace(/^(\d+[A-Za-z-]?),.*$/, '$1').trim();
-      curUnits.push({apt:aptFinal, loc:ud.loc, tel:ud.tel, loyer:ud.loyer, dispo:ud.dispo});
+      var dedupeKey = (curAddr||'') + '|' + aptFinal + '|' + (ud.loc||'') + '|' + (ud.loyer||'');
+      if (!curSeen[dedupeKey]) {
+        curSeen[dedupeKey] = true;
+        curUnits.push({apt:aptFinal, loc:ud.loc, tel:ud.tel, loyer:ud.loyer, dispo:ud.dispo});
+      }
     }
   }
   save();
   return result;
+}
+
+function safeSheetTitle(s) {
+  return s.replace(/[\[\]\*\/\\\?\:]/g, '-').substring(0, 30);
 }
 
 function groupByAgent(bldgs) {
@@ -454,12 +465,25 @@ zone.addEventListener('drop', function(e) {
   if (e.dataTransfer.files[0]) loadFile(e.dataTransfer.files[0]);
 });
 
+function waitForXLSX(timeoutMs) {
+  timeoutMs = timeoutMs || 8000;
+  return new Promise(function(resolve, reject) {
+    var start = Date.now();
+    (function check() {
+      if (window.XLSX) return resolve(true);
+      if (Date.now() - start > timeoutMs) return reject(new Error("Librairie XLSX introuvable (CDN bloque)."));
+      setTimeout(check, 60);
+    })();
+  });
+}
+
 function loadFile(file) {
   document.getElementById('zone-icon').textContent = '...';
   document.getElementById('zone-title').textContent = 'Lecture en cours...';
   var reader = new FileReader();
-  reader.onload = function(e) {
+  reader.onload = async function(e) {
     try {
+      await waitForXLSX();
       var data = new Uint8Array(e.target.result);
       var wb = XLSX.read(data, {type:'array', raw:false});
       var ws = wb.Sheets[wb.SheetNames[0]];
@@ -500,30 +524,39 @@ function loadFile(file) {
   reader.readAsArrayBuffer(file);
 }
 
+var tokenClient = null;
+
 function connecterGoogle() {
-  var url = 'https://accounts.google.com/o/oauth2/auth' +
-    '?client_id=' + CLIENT_ID +
-    '&redirect_uri=https://psylvestre1956-cyber.github.io/lelogeur-agent' +
-    '&response_type=token' +
-    '&scope=' + encodeURIComponent(SCOPES) +
-    '&prompt=consent';
-  window.location.href = url;
+  if (!tokenClient) {
+    alert("Google Identity Services pas pret. Recharge la page.");
+    return;
+  }
+  tokenClient.requestAccessToken({ prompt: 'consent' });
 }
 
 window.addEventListener('load', function() {
-  var hash = window.location.hash.substring(1);
-  var params = {};
-  hash.split('&').forEach(function(p) { var kv=p.split('='); if(kv[0]) params[kv[0]]=kv[1]; });
-  if (params['access_token']) {
-    token = params['access_token'];
-    window.history.replaceState({}, '', window.location.pathname);
-    var btn = document.getElementById('btn-auth');
-    btn.textContent = 'Connecte a Google';
-    btn.classList.add('green');
-    btn.disabled = true;
-    unlock('card3');
-    document.getElementById('btn-run').disabled = false;
+  function initGIS() {
+    if (window.google && google.accounts && google.accounts.oauth2) {
+      tokenClient = google.accounts.oauth2.initTokenClient({
+        client_id: CLIENT_ID,
+        scope: SCOPES,
+        callback: function(resp) {
+          if (resp && resp.access_token) {
+            token = resp.access_token;
+            var btn = document.getElementById('btn-auth');
+            btn.textContent = 'Connecte a Google';
+            btn.classList.add('green');
+            btn.disabled = true;
+            unlock('card3');
+            document.getElementById('btn-run').disabled = false;
+          }
+        }
+      });
+    } else {
+      setTimeout(initGIS, 200);
+    }
   }
+  initGIS();
 });
 
 function sheetsAPI(method, path, body) {
@@ -564,10 +597,10 @@ async function lancerAgent() {
     var keys = Object.keys(groups).sort();
     log(keys.length + ' groupes', 'hi');
 
-    var toCreate = keys.filter(function(k){ return !existing[k.substring(0,30)]; });
+    var toCreate = keys.filter(function(k){ return !existing[safeSheetTitle(k)]; });
     if (toCreate.length) {
       var createRes = await sheetsAPI('POST', sheetId + ':batchUpdate', {
-        requests: toCreate.map(function(k){ return {addSheet:{properties:{title:k.substring(0,30)}}}; })
+        requests: toCreate.map(function(k){ return {addSheet:{properties:{title:safeSheetTitle(k)}}}; })
       });
       createRes.replies.forEach(function(r){
         if (r.addSheet) existing[r.addSheet.properties.title] = r.addSheet.properties.sheetId;
@@ -581,7 +614,7 @@ async function lancerAgent() {
     keys.forEach(function(key) {
       var bldgs = groups[key];
       var sm = groupByStreet(bldgs);
-      var tab = key.substring(0,30);
+      var tab = safeSheetTitle(key);
       var rows = [];
       rows.push(['Agent(s) : '+key,'','','','','']);
       rows.push(['Mis a jour : '+new Date().toLocaleDateString('fr-CA'),'','','','','']);
@@ -627,7 +660,7 @@ async function lancerAgent() {
     keys.forEach(function(key) {
       var bldgs = groups[key];
       var sm = groupByStreet(bldgs);
-      var tab = key.substring(0,30);
+      var tab = safeSheetTitle(key);
       var sid = sids[tab];
       if (sid === undefined) return;
 
