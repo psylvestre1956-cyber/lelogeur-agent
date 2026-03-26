@@ -628,7 +628,18 @@ async function lancerAgent() {
         sm[street].forEach(function(b) {
           b.unites.forEach(function(u) {
           if (b.adresse.indexOf('3875') >= 0) { console.log('3875 unit:', u.apt, u.loc, u.loyer); }
-            var addr = b.adresse.split(',').slice(1).join(',').trim().substring(0,50);
+            // Clean address: remove short prefix code and postal code, keep civic + street + city
+var addrParts = b.adresse.split(',');
+var addr = '';
+if (addrParts.length >= 3) {
+  // Format: "815 CROISS, 815 Croissant des Roselins, Laval (Québec) H7L 0K5"
+  // We want: "815 Croissant des Roselins, Laval"
+  var street = addrParts[1].trim();
+  var city = addrParts[2].replace(/\s*\(.*\).*/, '').trim();
+  addr = street + (city ? ', ' + city : '');
+} else {
+  addr = b.adresse.split(',').slice(1).join(',').trim().substring(0, 50);
+}
             rows.push([addr, u.apt||'', u.loc||'', u.tel||'', u.loyer||'', u.dispo||'']);
           });
         });
