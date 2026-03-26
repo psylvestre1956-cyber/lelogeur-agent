@@ -410,7 +410,9 @@ function parseExcel(rows) {
 
     if (isUnit && !/^Stationnement/i.test(aptClean)) {
       var ud = extractData(cells.slice(1));
-      curUnits.push({apt:aptClean, loc:ud.loc, tel:ud.tel, loyer:ud.loyer, dispo:ud.dispo});
+      // Clean apt: "269, Angèle-Chartrand" -> "269", "1102, Du Grand Pic" -> "1102"
+      var aptFinal = aptClean.replace(/^(\d+[A-Za-z-]?),.*$/, '$1').trim();
+      curUnits.push({apt:aptFinal, loc:ud.loc, tel:ud.tel, loyer:ud.loyer, dispo:ud.dispo});
     }
   }
   save();
