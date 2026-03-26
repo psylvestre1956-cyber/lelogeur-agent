@@ -5,7 +5,26 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Agent LeLogeur</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@600;700;800&display=swap" rel="stylesheet">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script>
+// Load XLSX from multiple CDN sources as fallback
+(function() {
+  var cdns = [
+    'https://unpkg.com/xlsx@0.18.5/dist/xlsx.full.min.js',
+    'https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js',
+    'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js'
+  ];
+  var loaded = false;
+  function tryLoad(i) {
+    if (i >= cdns.length) return;
+    var s = document.createElement('script');
+    s.src = cdns[i];
+    s.onload = function() { loaded = true; };
+    s.onerror = function() { if (!loaded) tryLoad(i+1); };
+    document.head.appendChild(s);
+  }
+  tryLoad(0);
+})();
+</script>
 <style>
 :root{--bg:#0e0e11;--surface:#16161b;--border:#2a2a32;--accent:#7c6af7;--accent2:#4ecdc4;--text:#e8e8f0;--muted:#6b6b80;--ok:#4ecdc4;--err:#ff6b6b;--mono:'DM Mono',monospace;--sans:'Syne',sans-serif;}
 *{box-sizing:border-box;margin:0;padding:0;}
@@ -455,6 +474,11 @@ function loadFile(file) {
       document.getElementById('s-un').textContent = total;
       document.getElementById('stats').style.display = 'grid';
 
+      // Debug: log buildings with units
+      var joseeBuildings = buildings.filter(function(b){ return b.agents.indexOf('Josee')>=0 || (lookupAgents(b.adresse)||[]).indexOf('Josee')>=0; });
+      console.log('Josee buildings:', joseeBuildings.map(function(b){ return b.adresse+' ('+b.unites.length+' units)'; }));
+      var b3875 = buildings.filter(function(b){ return b.adresse.indexOf('3875')>=0; });
+      console.log('3875:', b3875.map(function(b){ return b.adresse+' agents='+JSON.stringify(b.agents)+' units='+b.unites.length; }));
       zone.classList.add('ok');
       document.getElementById('zone-icon').textContent = 'OK';
       document.getElementById('zone-title').textContent = file.name;
