@@ -278,11 +278,10 @@ function getStreet(addr) {
 }
 
 function getStreetOnly(addr) {
-  // Returns just the street name without the civic number
-  // e.g. "1100 du Grand-Pic, Laval" -> "du Grand-Pic, Laval"
   var street = getStreet(addr);
-  // Remove leading civic number from street name if present
-  street = street.replace(/^\d+[A-Za-z-]*\s+/, '');
+  // Only remove leading number if followed by a street word (du, de, des, la, le, rue, etc.)
+  // NOT if followed by another number (like "3875 56 Rue" -> keep as is)
+  street = street.replace(/^\d+[A-Za-z-]*\s+(?=[A-Za-zÀ-ÿ])/, '');
   return street;
 }
 
