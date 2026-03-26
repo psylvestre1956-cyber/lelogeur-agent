@@ -277,6 +277,15 @@ function getStreet(addr) {
   return addr;
 }
 
+function getStreetOnly(addr) {
+  // Returns just the street name without the civic number
+  // e.g. "1100 du Grand-Pic, Laval" -> "du Grand-Pic, Laval"
+  var street = getStreet(addr);
+  // Remove leading civic number from street name if present
+  street = street.replace(/^\d+[A-Za-z-]*\s+/, '');
+  return street;
+}
+
 function cleanAddr(txt) {
   var lines = String(txt).split('\n');
   for (var i = 0; i < lines.length; i++) {
@@ -311,7 +320,7 @@ function parseExcel(rows) {
 
   function save() {
     if (curAddr && curUnits.length > 0) {
-      result.push({adresse:curAddr, agents:curAgents, rue:getStreet(curAddr), unites:curUnits});
+      result.push({adresse:curAddr, agents:curAgents, rue:getStreetOnly(curAddr), unites:curUnits});
     }
   }
 
