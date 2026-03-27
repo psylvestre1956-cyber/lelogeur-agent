@@ -167,45 +167,47 @@ window.addEventListener('load', () => {
   }
 });
 
-// Normalize column name for fuzzy matching
+// Normalize column name for matching
 function normalizeCol(str) {
   return String(str || '').toLowerCase()
-    .replace(/[éèê]/g, 'e').replace(/[àâ]/g, 'a').replace(/[ùû]/g, 'u')
-    .replace(/[îï]/g, 'i').replace(/[ôö]/g, 'o')
-    .replace(/\s+/g, ' ').trim();
+    .replace(/[éèêë]/g, 'e').replace(/[àâä]/g, 'a').replace(/[ùûü]/g, 'u')
+    .replace(/[îï]/g, 'i').replace(/[ôö]/g, 'o').replace(/[ç]/g, 'c')
+    .replace(/[^a-z0-9# ]/g, ' ').replace(/\s+/g, ' ').trim();
 }
+
+// Precise mapping for Rive Sud source columns → master columns
+const RIVE_SUD_MAPPING = {
+  'Adresse':           ['adresse'],
+  'Ville':             ['ville'],   // will be extracted from address if not found
+  '# App':             ['# apt', '# app', '#apt', '#app', 'apt', 'app', 'no app', 'numero'],
+  'Grandeur':          ['grandeur', 'taille', 'size'],
+  'Prix régulier':     ['prix regulier', 'prix regulier', 'loyer', 'prix'],
+  'Prix promo':        ['prix promo', 'promo', 'special'],
+  'Date':              ['date occupation', 'date', 'disponible', 'occupation'],
+  'Stationnement':     ['stationnement', 'parking', 'stationne'],
+  'Locataire actuel':  ['nom futurs locataires', 'locataire', 'nom locataire', 'tenant', 'nom'],
+  'Lien annonce':      ['lien annonce', 'lien', 'url', 'link', 'facebook', 'kijiji']
+};
 
 // Find best matching column index in source headers
 function findColIdx(sourceHeaders, targetName) {
-  const target = normalizeCol(targetName);
-  for (let i = 0; i < sourceHeaders.length; i++) {
-    const src = normalizeCol(sourceHeaders[i]);
-    if (src === target) return i;
-    if (src.includes(target) || target.includes(src)) return i;
-  }
-  // Special aliases
-  const aliases = {
-    'adresse': ['adresse', 'address', 'rue', 'street'],
-    'ville': ['ville', 'city', 'municipalite'],
-    '# app': ['# app', '#app', 'app', 'appartement', 'apt', 'no app', 'numero'],
-    'grandeur': ['grandeur', 'taille', 'size', 'pieces', 'pi'],
-    'prix regulier': ['prix regulier', 'prix', 'loyer', 'rent', 'montant'],
-    'prix promo': ['prix promo', 'promo', 'special', 'rabais'],
-    'date': ['date', 'disponible', 'available', 'occupation'],
-    'stationnement': ['stationnement', 'parking', 'stationne'],
-    'locataire actuel': ['locataire', 'tenant', 'nom', 'occupant', 'resident'],
-    'lien annonce': ['lien', 'annonce', 'url', 'link', 'facebook', 'fb', 'kijiji']
-  };
-  const aliasKey = normalizeCol(targetName).replace(/[^a-z0-9 ]/g, '').trim();
-  if (aliases[aliasKey]) {
-    for (const alias of aliases[aliasKey]) {
-      for (let i = 0; i < sourceHeaders.length; i++) {
-        const src = normalizeCol(sourceHeaders[i]);
-        if (src.includes(alias) || alias.includes(src)) return i;
-      }
+  const aliases = RIVE_SUD_MAPPING[targetName] || [normalizeCol(targetName)];
+  for (const alias of aliases) {
+    for (let i = 0; i < sourceHeaders.length; i++) {
+      const src = normalizeCol(sourceHeaders[i]);
+      if (src === alias || src.includes(alias) || alias.includes(src)) return i;
     }
   }
   return -1;
+}
+
+// Extract city from address string (e.g., "5725 Ch. Chambly, Saint-Hubert" → "Saint-Hubert")
+function extractVille(adresse) {
+  if (!adresse) return '';
+  const parts = adresse.split(',');
+  if (parts.length >= 2) return parts[parts.length - 1].trim();
+  // Try to extract after last space sequence
+  return '';
 }
 
 async function lancerIntegration() {
@@ -269,9 +271,19 @@ async function lancerIntegration() {
       for (let i = headerRowIdx + 1; i < rows.length; i++) {
         const row = rows[i];
         if (!row.some(c => c && String(c).trim())) continue; // skip empty rows
+        // Skip metadata/header-like rows
+        const firstCell = String(row[0] || '').trim();
+        if (/^(Locataires|Type|Statut|Total|Sous-total)/i.test(firstCell)) continue;
+        if (/^[0-9]+[,.]?[0-9]*$/.test(firstCell) && !firstCell.match(/^\d+\s/)) continue; // skip pure numbers
 
         const mappedRow = MASTER_COLS.map(col => {
           const idx = colMap[col];
+          if (idx === '__extract_from_adresse__') {
+            // Extract city from address
+            const addrIdx = colMap['Adresse'];
+            const addr = addrIdx >= 0 ? String(row[addrIdx] || '') : '';
+            return extractVille(addr);
+          }
           if (idx < 0) return '';
           return row[idx] !== undefined ? String(row[idx]) : '';
         });
