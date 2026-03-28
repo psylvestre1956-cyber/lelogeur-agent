@@ -3,730 +3,741 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Agent LeLogeur</title>
+<title>Agent LeLogeur → Google Sheets</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@600;700;800&display=swap" rel="stylesheet">
-<script src="https://accounts.google.com/gsi/client" async defer></script>
-<script>
-// Load XLSX from multiple CDN sources as fallback
-(function() {
-  var cdns = [
-    'https://unpkg.com/xlsx@0.18.5/dist/xlsx.full.min.js',
-    'https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js',
-    'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js'
-  ];
-  var loaded = false;
-  function tryLoad(i) {
-    if (i >= cdns.length) return;
-    var s = document.createElement('script');
-    s.src = cdns[i];
-    s.onload = function() { loaded = true; };
-    s.onerror = function() { if (!loaded) tryLoad(i+1); };
-    document.head.appendChild(s);
-  }
-  tryLoad(0);
-})();
-</script>
 <style>
-:root{--bg:#0e0e11;--surface:#16161b;--border:#2a2a32;--accent:#7c6af7;--accent2:#4ecdc4;--text:#e8e8f0;--muted:#6b6b80;--ok:#4ecdc4;--err:#ff6b6b;--mono:'DM Mono',monospace;--sans:'Syne',sans-serif;}
-*{box-sizing:border-box;margin:0;padding:0;}
-body{background:var(--bg);color:var(--text);font-family:var(--sans);min-height:100vh;}
-body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(var(--border) 1px,transparent 1px),linear-gradient(90deg,var(--border) 1px,transparent 1px);background-size:40px 40px;opacity:.2;pointer-events:none;z-index:0;}
-.wrap{position:relative;z-index:1;max-width:700px;margin:0 auto;padding:48px 24px 80px;}
-.badge{display:inline-flex;align-items:center;gap:6px;font-family:var(--mono);font-size:11px;color:var(--accent2);background:rgba(78,205,196,.1);border:1px solid rgba(78,205,196,.2);border-radius:20px;padding:4px 12px;margin-bottom:16px;letter-spacing:.08em;}
-.badge::before{content:'●';font-size:8px;}
-h1{font-size:clamp(26px,4vw,42px);font-weight:800;line-height:1.05;letter-spacing:-.02em;margin-bottom:8px;}
-h1 span{color:var(--accent);}
-.sub{font-size:13px;color:var(--muted);line-height:1.6;margin-bottom:32px;}
-.card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:22px;margin-bottom:12px;}
-.clabel{font-family:var(--mono);font-size:10px;color:var(--accent);letter-spacing:.1em;text-transform:uppercase;margin-bottom:14px;display:flex;align-items:center;gap:8px;}
-.clabel::before{content:'';display:inline-block;width:14px;height:1px;background:var(--accent);}
-label.zone{display:block;border:2px dashed var(--border);border-radius:10px;padding:30px 20px;text-align:center;cursor:pointer;transition:border-color .2s;}
-label.zone:hover{border-color:var(--accent);}
-label.zone.ok{border-color:var(--accent2);}
-.zone-icon{font-size:30px;margin-bottom:8px;}
-.zone-title{font-size:14px;font-weight:700;margin-bottom:4px;}
-.zone-sub{font-size:12px;color:var(--muted);font-family:var(--mono);}
-.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:14px;}
-.stat{background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:10px 14px;}
-.stat-n{font-size:22px;font-weight:800;color:var(--accent2);line-height:1;margin-bottom:3px;}
-.stat-l{font-family:var(--mono);font-size:10px;color:var(--muted);text-transform:uppercase;}
-input[type=text]{width:100%;background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:12px 14px;font-family:var(--mono);font-size:13px;color:var(--text);outline:none;transition:border-color .2s;margin-bottom:6px;}
-input[type=text]:focus{border-color:var(--accent);}
-input[type=text]::placeholder{color:var(--muted);}
-.hint{font-family:var(--mono);font-size:11px;color:var(--muted);}
-.hint code{color:var(--accent2);background:rgba(78,205,196,.08);padding:1px 5px;border-radius:3px;}
-.btn{width:100%;padding:14px;background:linear-gradient(135deg,var(--accent),#5a4fd4);border:none;border-radius:10px;color:#fff;font-family:var(--sans);font-size:14px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;transition:opacity .2s,transform .15s;margin-top:14px;}
-.btn:hover{opacity:.9;transform:translateY(-1px);}
-.btn:active{transform:scale(.98);}
-.btn:disabled{opacity:.4;cursor:not-allowed;transform:none;}
-.btn.green{background:linear-gradient(135deg,#1a6b4a,#0d4a32);}
-.prog-track{height:3px;background:var(--border);border-radius:2px;overflow:hidden;margin:14px 0 4px;}
-.prog-fill{height:100%;background:linear-gradient(90deg,var(--accent),var(--accent2));width:0%;transition:width .4s ease;border-radius:2px;}
-.prog-lbl{font-family:var(--mono);font-size:11px;color:var(--muted);min-height:16px;}
-.log{background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:14px;font-family:var(--mono);font-size:12px;line-height:1.8;min-height:80px;max-height:200px;overflow-y:auto;margin-top:14px;}
-.ll{color:var(--muted);}
-.ll.ok{color:var(--ok);}
-.ll.err{color:var(--err);}
-.ll.hi{color:var(--text);}
-.result-link{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;background:rgba(78,205,196,.06);border:1px solid rgba(78,205,196,.2);border-radius:10px;color:var(--accent2);text-decoration:none;font-family:var(--mono);font-size:13px;margin-top:12px;transition:background .2s;}
-.result-link:hover{background:rgba(78,205,196,.12);}
-.dim{opacity:.4;pointer-events:none;}
+  :root {
+    --bg: #0e0e11; --surface: #16161b; --border: #2a2a32;
+    --accent: #7c6af7; --accent2: #4ecdc4; --text: #e8e8f0;
+    --muted: #6b6b80; --success: #4ecdc4; --danger: #ff6b6b;
+    --mono: 'DM Mono', monospace; --display: 'Syne', sans-serif;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: var(--display); min-height: 100vh; }
+  body::before {
+    content: ''; position: fixed; inset: 0;
+    background-image: linear-gradient(var(--border) 1px, transparent 1px), linear-gradient(90deg, var(--border) 1px, transparent 1px);
+    background-size: 40px 40px; opacity: 0.2; pointer-events: none; z-index: 0;
+  }
+  .glow { position: fixed; width: 500px; height: 500px; background: radial-gradient(circle, rgba(124,106,247,0.1) 0%, transparent 70%); top: -150px; left: -100px; pointer-events: none; z-index: 0; }
+  .wrap { position: relative; z-index: 1; max-width: 720px; margin: 0 auto; padding: 48px 24px 80px; }
+  .header { margin-bottom: 32px; animation: fadeUp 0.5s ease both; }
+  .badge { display: inline-flex; align-items: center; gap: 6px; font-family: var(--mono); font-size: 11px; color: var(--accent2); background: rgba(78,205,196,0.1); border: 1px solid rgba(78,205,196,0.2); border-radius: 20px; padding: 4px 12px; margin-bottom: 16px; letter-spacing: 0.08em; }
+  .badge::before { content: '●'; font-size: 8px; }
+  h1 { font-size: clamp(26px, 4vw, 40px); font-weight: 800; line-height: 1.05; letter-spacing: -0.02em; margin-bottom: 8px; }
+  h1 span { color: var(--accent); }
+  .subtitle { font-size: 13px; color: var(--muted); line-height: 1.6; }
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 22px; margin-bottom: 12px; animation: fadeUp 0.5s 0.1s ease both; }
+  .card-label { font-family: var(--mono); font-size: 10px; color: var(--accent); letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 14px; display: flex; align-items: center; gap: 8px; }
+  .card-label::before { content: ''; display: inline-block; width: 14px; height: 1px; background: var(--accent); }
+  input[type="text"] { width: 100%; background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 12px 14px; font-family: var(--mono); font-size: 13px; color: var(--text); outline: none; transition: border-color 0.2s; margin-bottom: 6px; }
+  input[type="text"]:focus { border-color: var(--accent); }
+  input[type="text"]::placeholder { color: var(--muted); }
+  .hint { font-family: var(--mono); font-size: 11px; color: var(--muted); }
+  .hint code { color: var(--accent2); background: rgba(78,205,196,0.08); padding: 1px 5px; border-radius: 3px; }
+
+  /* File drop zone */
+  .drop-zone {
+    border: 2px dashed var(--border); border-radius: 10px; padding: 28px 20px;
+    text-align: center; cursor: pointer; transition: border-color 0.2s, background 0.2s;
+    position: relative;
+  }
+  .drop-zone:hover, .drop-zone.dragover { border-color: var(--accent); background: rgba(124,106,247,0.05); }
+  .drop-zone input[type="file"] { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%; }
+  .drop-icon { font-size: 32px; margin-bottom: 10px; }
+  .drop-text { font-size: 14px; font-weight: 600; color: var(--text); margin-bottom: 4px; }
+  .drop-sub { font-size: 12px; color: var(--muted); font-family: var(--mono); }
+  .file-loaded { background: rgba(78,205,196,0.06); border-color: var(--accent2); }
+  .file-loaded .drop-icon { filter: none; }
+
+  /* Stats */
+  .stats-row { display: grid; grid-template-columns: repeat(4,1fr); gap: 8px; margin: 14px 0 0; }
+  .stat { background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 10px 14px; }
+  .stat-num { font-size: 20px; font-weight: 800; letter-spacing: -0.02em; line-height: 1; margin-bottom: 2px; color: var(--accent2); }
+  .stat-label { font-family: var(--mono); font-size: 10px; color: var(--muted); text-transform: uppercase; }
+
+  .btn { width: 100%; padding: 14px; background: linear-gradient(135deg, var(--accent), #5a4fd4); border: none; border-radius: 10px; color: white; font-family: var(--display); font-size: 14px; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; transition: opacity 0.2s, transform 0.15s; margin-top: 14px; }
+  .btn:hover { opacity: 0.9; transform: translateY(-1px); }
+  .btn:active { transform: scale(0.98); }
+  .btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+  .btn-auth { background: linear-gradient(135deg, #3a3a6a, #2a2a5a); }
+  .btn-auth.connected { background: linear-gradient(135deg, #1a6b4a, #0d4a32); }
+
+  .progress-track { height: 3px; background: var(--border); border-radius: 2px; overflow: hidden; margin: 14px 0 4px; }
+  .progress-fill { height: 100%; background: linear-gradient(90deg, var(--accent), var(--accent2)); width: 0%; transition: width 0.5s cubic-bezier(0.4,0,0.2,1); border-radius: 2px; }
+  .progress-label { font-family: var(--mono); font-size: 11px; color: var(--muted); min-height: 16px; }
+  .log { background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 14px; font-family: var(--mono); font-size: 12px; line-height: 1.8; min-height: 80px; max-height: 200px; overflow-y: auto; margin-top: 14px; scrollbar-width: thin; scrollbar-color: var(--border) transparent; }
+  .ll { color: var(--muted); } .ll.ok { color: var(--success); } .ll.err { color: var(--danger); } .ll.hi { color: var(--text); }
+  .result-link { display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; background: rgba(78,205,196,0.06); border: 1px solid rgba(78,205,196,0.2); border-radius: 10px; color: var(--accent2); text-decoration: none; font-family: var(--mono); font-size: 13px; margin-top: 12px; transition: background 0.2s; }
+  .result-link:hover { background: rgba(78,205,196,0.12); }
+  @keyframes fadeUp { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: translateY(0); } }
+  @media(max-width:480px) { .stats-row { grid-template-columns: repeat(2,1fr); } }
 </style>
 </head>
 <body>
+<div class="glow"></div>
 <div class="wrap">
-  <div class="badge">LeLogeur — Agent v6</div>
-  <h1>Appartements<br><span>- Google Sheets</span></h1>
-  <p class="sub">Upload ton Excel - Par agent - Regroupe par rue - Anti-doublons</p>
+  <div class="header">
+    <div class="badge">LeLogeur — Agent v6</div>
+    <h1>Appartements<br><span>→ Google Sheets</span></h1>
+    <p class="subtitle">Upload ton Excel · Par agent · Regroupé par rue · Anti-doublons</p>
+  </div>
 
+  <!-- ÉTAPE 1 : Fichier Excel -->
   <div class="card">
-    <div class="clabel">Etape 1 - Fichier Excel</div>
-    <label class="zone" id="zone" for="file-input">
-      <div class="zone-icon" id="zone-icon">&#128194;</div>
-      <div class="zone-title" id="zone-title">Clique ici pour choisir ton fichier Excel</div>
-      <div class="zone-sub" id="zone-sub">.xls ou .xlsx acceptes</div>
-    </label>
-    <input type="file" id="file-input" accept=".xls,.xlsx" style="display:none">
-    <div class="stats" id="stats" style="display:none">
-      <div class="stat"><div class="stat-n" id="s-bat">0</div><div class="stat-l">Batiments</div></div>
-      <div class="stat"><div class="stat-n" id="s-ag">0</div><div class="stat-l">Agents</div></div>
-      <div class="stat"><div class="stat-n" id="s-on">0</div><div class="stat-l">Onglets</div></div>
-      <div class="stat"><div class="stat-n" id="s-un">0</div><div class="stat-l">Unites</div></div>
+    <div class="card-label">Étape 1 — Fichier Excel</div>
+    <div style="display:flex;flex-direction:column;gap:12px;">
+      <label for="file-input" style="display:block;background:var(--bg);border:2px dashed var(--border);border-radius:10px;padding:28px 20px;text-align:center;cursor:pointer;transition:border-color 0.2s;" id="drop-zone" ondragover="event.preventDefault();this.style.borderColor='var(--accent)'" ondragleave="this.style.borderColor='var(--border)'" ondrop="event.preventDefault();this.style.borderColor='var(--border)';chargerFichier(event.dataTransfer.files[0])">
+        <div class="drop-icon" id="drop-icon">📂</div>
+        <div class="drop-text" id="drop-text">Clique ici pour choisir ton fichier Excel</div>
+        <div class="drop-sub" id="drop-sub">.xls ou .xlsx</div>
+      </label>
+      <input type="file" id="file-input" accept=".xls,.xlsx" style="display:none;" onchange="if(typeof chargerFichier==='function'){chargerFichier(this.files[0])}else{alert('Chargement en cours, réessaie')}">
+    </div>
+    <div class="stats-row" id="file-stats" style="display:none;">
+      <div class="stat"><div class="stat-num" id="stat-bat">0</div><div class="stat-label">Bâtiments</div></div>
+      <div class="stat"><div class="stat-num" id="stat-agents">0</div><div class="stat-label">Agents</div></div>
+      <div class="stat"><div class="stat-num" id="stat-onglets">0</div><div class="stat-label">Onglets</div></div>
+      <div class="stat"><div class="stat-num" id="stat-unites">0</div><div class="stat-label">Unités</div></div>
     </div>
   </div>
 
-  <div class="card dim" id="card2">
-    <div class="clabel">Etape 2 - Connecter Google</div>
-    <button class="btn" id="btn-auth" onclick="connecterGoogle()">
-      Connecter mon compte Google
+  <!-- ÉTAPE 2 : Google -->
+  <div class="card" id="card2" style="opacity:0.4;pointer-events:none;">
+    <div class="card-label">Étape 2 — Connecter Google</div>
+    <button class="btn btn-auth" id="btn-auth" onclick="connecterGoogle()">
+      <span id="auth-text">🔑 Connecter mon compte Google</span>
     </button>
   </div>
 
-  <div class="card dim" id="card3">
-    <div class="clabel">Etape 3 - ID du Google Sheet</div>
-    <input type="text" id="sheet-id" placeholder="1a5IxEWxm51rbfhgKk-A0NJSpvcd5HqdktE8bauRCIz8" value="1a5IxEWxm51rbfhgKk-A0NJSpvcd5HqdktE8bauRCIz8">
-    <div class="hint">URL : docs.google.com/spreadsheets/d/<code>CET-ID</code>/edit</div>
-    <button class="btn" id="btn-run" onclick="lancerAgent()" disabled>Lancer l'agent</button>
+  <!-- ÉTAPE 3 : Sheet ID + Run -->
+  <div class="card" id="card3" style="opacity:0.4;pointer-events:none;">
+    <div class="card-label">Étape 3 — ID du Google Sheet</div>
+    <input type="text" id="sheet-id" placeholder="1a5IxEWxm51rbfhgKk-A0NJSpvcd5HqdktE8bauRCIz8" />
+    <div class="hint">Dans l'URL : docs.google.com/spreadsheets/d/<code>CET-ID</code>/edit</div>
+    <button class="btn" id="btn-run" onclick="lancerAgent()" disabled>
+      <span>▶</span><span id="run-text">Lancer l'agent</span>
+    </button>
   </div>
 
-  <div class="card dim" id="card4">
-    <div class="clabel">Progression</div>
-    <div class="prog-track"><div class="prog-fill" id="prog"></div></div>
-    <div class="prog-lbl" id="prog-lbl">En attente...</div>
+  <!-- PROGRESSION -->
+  <div class="card" id="card4" style="opacity:0.4;">
+    <div class="card-label">Progression</div>
+    <div class="progress-track"><div class="progress-fill" id="progress"></div></div>
+    <div class="progress-label" id="plabel">En attente...</div>
     <div class="log" id="log"><div class="ll">En attente...</div></div>
-    <div id="result"></div>
+    <div id="result-area"></div>
   </div>
 </div>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script>
-var CLIENT_ID = '1048377543224-56s899bif9r7vrvme12uercg0noh87nq.apps.googleusercontent.com';
-var SCOPES = 'https://www.googleapis.com/auth/spreadsheets';
-var token = null;
-var buildings = [];
+const CLIENT_ID = '1048377543224-56s899bif9r7vrvme12uercg0noh87nq.apps.googleusercontent.com';
+const SCOPES = 'https://www.googleapis.com/auth/spreadsheets';
+let accessToken = null;
+let parsedBuildings = [];
 
-// Complete address -> agents mapping (hardcoded, no need for Excel column)
-var ADDR_AGENTS = {
-  "100 du Pomerol":["Josee"],
-  "1001 Mont-Laval":["Myriam"],
-  "108 Dore-Jaune":["Maria","Janie"],
-  "1100 du Grand-Pic":["Janie","Isabelle"],
-  "1102 du Grand-Pic":["Janie","Isabelle"],
-  "1104 du Grand-Pic":["Janie","Isabelle"],
-  "1110 du Grand-Pic":["Janie","Isabelle"],
-  "1146 du Grand-Pic":["Janie","Isabelle"],
-  "116 Campagnol":["Maria","Janie"],
-  "1165 du Grand-Pic":["Janie","Isabelle"],
-  "1167 du Grand-Pic":["Janie","Isabelle"],
-  "1169 du Grand-Pic":["Janie","Isabelle"],
-  "1171 du Grand-Pic":["Janie","Isabelle"],
-  "1173 du Grand-Pic":["Janie","Isabelle"],
-  "1175 du Grand-Pic":["Janie","Isabelle"],
-  "12339 Treffle-Berthiaume":["Maria"],
-  "12349 Treffle-Berthiaume":["Maria"],
-  "132 Campagnol":["Maria","Isabelle"],
-  "13525 Place du Cantonnier":["Repris par le proprio"],
-  "1360 du Grand-Pic":["Janie","Isabelle"],
-  "1372 du Grand-Pic":["Janie","Isabelle"],
-  "1378 du Grand-Pic":["Janie","Isabelle"],
-  "1450 Montgolfier":["Janie"],
-  "1452 du Grand-Pic":["Janie","Isabelle"],
-  "1456 du Grand-Pic":["Janie","Isabelle"],
-  "1458 du Grand-Pic":["Janie","Isabelle"],
-  "1471 de Ribeira":["Repris par le proprio"],
-  "1473 de Ribeira":["Repris par le proprio"],
-  "1475 de Ribeira":["Repris par le proprio"],
-  "1535 du Grand-Pic":["Janie","Isabelle"],
-  "1555 du Grand-Pic":["Janie","Isabelle"],
-  "1585 du Grand-Pic":["Janie","Isabelle"],
-  "1595 du Grand-Pic":["Janie","Isabelle"],
-  "161 Saule-Noir":["Maria","Janie"],
-  "1655 du Grand-Pic":["Maria","Janie"],
-  "1745 Rue de Plaisance":["Maria","Isabelle"],
-  "2095 Papineau":["Janie"],
-  "2290 de la Jonquille":["Ophelie"],
-  "2303 Dorion":["Janie"],
-  "2330 de la Jonquille":["Ophelie"],
-  "2350 de la Jonquille":["Ophelie"],
-  "257 Montee Sanche":["Josee"],
-  "265 Angele-Chartrand":["Josee"],
-  "269 Angele-Chartrand":["Josee"],
-  "274 Angele-Chartrand":["Josee"],
-  "282 Angele-Chartrand":["Josee"],
-  "289 Angele-Chartrand":["Josee"],
-  "290 Angele-Chartrand":["Josee"],
-  "3187 Dali":["Janie"],
-  "3189 Dali":["Janie"],
-  "322 Angele-Chartrand":["Josee"],
-  "328 Angele-Chartrand":["Josee"],
-  "379 Des Melezes":["Ophelie"],
-  "383 Des Melezes":["Ophelie"],
-  "387 Des Melezes":["Ophelie"],
-  "3875 56 Rue":["Josee"],
-  "489 Verone":["Ophelie"],
-  "4931 Belanger":["Janie"],
-  "499 Verone":["Ophelie"],
-  "509 Verone":["Ophelie"],
-  "60 Picard":["Maria","Janie"],
-  "64 Principale":["Repris par le proprio"],
-  "69 Campagnol":["Maria","Janie"],
-  "699 Peladeau":["Janie"],
-  "72 Principale":["Repris par le proprio"],
-  "75 Campagnol":["Maria","Janie"],
-  "756 Mont-Laval":["Myriam"],
-  "760 Mont-Laval":["Myriam"],
-  "764 Mont-Laval":["Myriam"],
-  "768 Mont-Laval":["Myriam"],
-  "788 Mont-Laval":["Myriam"],
-  "815 Croissant des Roselins":["Janie","Isabelle"],
-  "835 Croissant des Roselins":["Janie","Isabelle"],
-  "837 Croissant des Roselins":["Janie","Isabelle"],
-  "839 Croissant des Roselins":["Janie","Isabelle"],
-  "861 Croissant des Roselins":["Janie","Isabelle"],
-  "871 Croissant des Roselins":["Janie","Isabelle"],
-  "881 Croissant des Roselins":["Janie","Isabelle"],
-  "88 Rue Gary-Carter":["Janie"],
-  "881 Toupin":["Maria"],
-  "90 du Pomerol":["Josee"]
+// Agent color palette
+const AGENT_COLORS = {
+  'Josée':   { bg: '#1a3a5c', light: '#e8f0fa' },
+  'Maria':   { bg: '#1a5c3a', light: '#e8faef' },
+  'Isabelle':{ bg: '#5c1a5c', light: '#fae8fa' },
+  'Lina':    { bg: '#5c3a1a', light: '#faf0e8' },
+  'Janie':   { bg: '#1a5c5c', light: '#e8fafa' },
+  'Myriam':  { bg: '#5c1a1a', light: '#fae8e8' },
+  'Ophélie': { bg: '#3a1a5c', light: '#f0e8fa' },
+  'Repris par le proprio': { bg: '#3a3a3a', light: '#f0f0f0' },
+  'default': { bg: '#2a2a5c', light: '#e8e8fa' }
 };
 
-function lookupAgents(addr) {
-  // Normalize: remove accents, lowercase for comparison
-  function norm(s) {
-    return s.toLowerCase()
-      .replace(/[éèêë]/g,'e').replace(/[àâä]/g,'a')
-      .replace(/[îï]/g,'i').replace(/[ôö]/g,'o')
-      .replace(/[ùûü]/g,'u').replace(/[ç]/g,'c');
+function getAgentColor(agentKey) {
+  const agents = agentKey.split(' & ');
+  for (const a of agents) {
+    if (AGENT_COLORS[a]) return AGENT_COLORS[a];
   }
-  var nAddr = norm(addr);
-  for (var key in ADDR_AGENTS) {
-    if (nAddr.indexOf(norm(key)) >= 0) {
-      return ADDR_AGENTS[key].slice();
+  return AGENT_COLORS['default'];
+}
+
+// ─── EXCEL PARSER ───────────────────────────────────────────────────
+async function chargerFichier(file) {
+  if (!file) return;
+  const zone = document.getElementById('drop-zone');
+  document.getElementById('drop-text').textContent = '⏳ Lecture en cours...';
+
+  try {
+    // Support both .xls and .xlsx
+    const data = await file.arrayBuffer();
+    const wb = XLSX.read(data, { type: 'array', cellText: true, cellDates: true });
+    const ws = wb.Sheets[wb.SheetNames[0]];
+    const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '', raw: false });
+
+    if (rows.length === 0) {
+      document.getElementById('drop-text').textContent = '❌ Fichier vide ou illisible';
+      return;
     }
+
+    parsedBuildings = parseExcel(rows);
+
+    const agentGroups = groupByAgent(parsedBuildings);
+    const totalUnits = parsedBuildings.reduce((s, b) => s + b.unites.length, 0);
+
+    document.getElementById('stat-bat').textContent = parsedBuildings.length;
+    document.getElementById('stat-agents').textContent = Object.keys(agentGroups).length;
+    document.getElementById('stat-onglets').textContent = Object.keys(agentGroups).length;
+    document.getElementById('stat-unites').textContent = totalUnits;
+    document.getElementById('file-stats').style.display = 'grid';
+
+    document.getElementById('drop-zone').style.borderColor = 'var(--accent2)';
+    document.getElementById('drop-icon').textContent = '✅';
+    document.getElementById('drop-text').textContent = file.name;
+    document.getElementById('drop-sub').textContent = parsedBuildings.length + ' batiments - ' + totalUnits + ' unites';
+
+    document.getElementById('card2').style.opacity = '1';
+    document.getElementById('card2').style.pointerEvents = 'auto';
+    document.getElementById('card4').style.opacity = '1';
+  } catch(e) {
+    document.getElementById('drop-text').textContent = '❌ Erreur: ' + e.message;
+    document.getElementById('drop-icon').textContent = '⚠️';
+    console.error('Erreur chargement Excel:', e);
   }
-  return null;
-}
-
-var MONTHS = {jan:0,fev:1,mars:2,avr:3,mai:4,juin:5,juil:6,aout:7,sep:8,oct:9,nov:10,dec:11};
-var TODAY = new Date(); TODAY.setHours(0,0,0,0);
-var ADDR_RE = /\(Quebec\)|\(Qu.bec\)|,\s*(Laval|Montreal|Montr.al|Terrebonne|Boisbriand|Lachenaie|Mirabel|Rosem.re|Charlemagne)/;
-var BAD_APTS = ['Liste des unites','Appartement','Condominium','Identification','Apparte','Statut'];
-
-function log(msg, type) {
-  var box = document.getElementById('log');
-  var d = document.createElement('div');
-  d.className = 'll' + (type ? ' '+type : '');
-  d.textContent = msg;
-  box.appendChild(d);
-  box.scrollTop = box.scrollHeight;
-}
-
-function prog(pct, lbl) {
-  document.getElementById('prog').style.width = pct + '%';
-  if (lbl !== undefined) document.getElementById('prog-lbl').textContent = lbl;
-}
-
-function sleep(ms) { return new Promise(function(r){ setTimeout(r,ms); }); }
-
-function unlock(id) {
-  var el = document.getElementById(id);
-  if (el) { el.classList.remove('dim'); }
-}
-
-function parseDispo(str) {
-  if (!str) return '';
-  var m = str.match(/(\d+)\s+(\w+)\.?\s+(\d{4})/);
-  if (!m) return str;
-  var key = m[2].toLowerCase().replace(/[^a-z]/g,'').substring(0,4);
-  var mo = MONTHS[key];
-  if (mo === undefined) return str;
-  var d = new Date(parseInt(m[3]), mo, parseInt(m[1]));
-  return (d < TODAY) ? 'VACANT' : str;
-}
-
-function normalizeAgent(t) {
-  t = t.trim();
-  if (!t) return null;
-  if (/repris/i.test(t)) return 'Repris par le proprio';
-  if (/oph/i.test(t)) return 'Ophelie';
-  if (/jos/i.test(t)) return 'Josee';
-  if (/mari/i.test(t)) return 'Maria';
-  if (/isab/i.test(t)) return 'Isabelle';
-  if (/jani/i.test(t)) return 'Janie';
-  if (/myri/i.test(t)) return 'Myriam';
-  if (/lina/i.test(t)) return 'Lina';
-  return t.charAt(0).toUpperCase() + t.slice(1).toLowerCase();
-}
-
-function parseAgentText(txt) {
-  var result = [];
-  var parts = String(txt).split(',');
-  for (var i = 0; i < parts.length; i++) {
-    var n = normalizeAgent(parts[i]);
-    if (n && result.indexOf(n) < 0) result.push(n);
-  }
-  return result;
-}
-
-function getStreet(addr) {
-  var p = addr.split(',');
-  if (p.length >= 2) {
-    var s = p[1].trim();
-    var c = p[2] ? p[2].replace(/\s*\(.*\).*/,'').trim() : '';
-    return s + (c ? ', '+c : '');
-  }
-  return addr;
-}
-
-function getStreetOnly(addr) {
-  var street = getStreet(addr);
-  // Only remove leading number if followed by a street word (du, de, des, la, le, rue, etc.)
-  // NOT if followed by another number (like "3875 56 Rue" -> keep as is)
-  street = street.replace(/^\d+[A-Za-z-]*\s+(?=[A-Za-zÀ-ÿ])/, '');
-  return street;
-}
-
-function cleanAddr(txt) {
-  var lines = String(txt).split('\n');
-  for (var i = 0; i < lines.length; i++) {
-    if (ADDR_RE.test(lines[i])) return lines[i].trim();
-  }
-  return lines[lines.length-1].trim();
-}
-
-function extractData(cells) {
-  var loc='', tel='', loyer='', dispo='';
-  for (var i = 0; i < cells.length; i++) {
-    var cs = String(cells[i]).trim();
-    if (!cs || cs==='undefined' || cs==='null') continue;
-    if (/Locataires/i.test(cs)) {
-      loc = cs.split('\n').filter(function(l){ return l && !/Locataires/i.test(l); }).join(', ');
-    } else if (/^[CD]\s*:/i.test(cs)) {
-      tel = tel ? tel+' / '+cs.replace(/\n/g,' / ') : cs.replace(/\n/g,' / ');
-    } else if (/\$/.test(cs) && !/mois/i.test(cs) && !/Loyer/i.test(cs)) {
-      loyer = cs;
-    } else if (/^\d{1,2}\s+(juil|juin|mai|avr|mars|f|jan|ao|sep|oct|nov|d)/i.test(cs)) {
-      dispo = parseDispo(cs);
-    } else if (!loc && /^[A-Z][a-z]/.test(cs) && !/^(Bail|Dispo|Factu|Statut|Appar|Liste)/i.test(cs)) {
-      loc = cs.split('\n').join(', ');
-    }
-  }
-  return {loc:loc, tel:tel, loyer:loyer, dispo:dispo};
 }
 
 function parseExcel(rows) {
-  var result = [];
-  var curAddr = null, curAgents = [], curUnits = [], curSeen = {};
+  const buildings = [];
+  let currentAddr = null;
+  let currentAgents = [];
+  let currentUnits = [];
+  const today = new Date(); today.setHours(0,0,0,0);
+  const addrPattern = /\(Québec\)|,\s*(Laval|Montreal|Montréal|Terrebonne|Boisbriand|Lachenaie|Mirabel|Rosemère|Charlemagne|L'Assomption)/;
+  const agentNames = ['Josée','josée','Maria','maria','Isabelle','isabelle','Lina','lina','Janie','janie','Myriam','myriam','Ophélie','ophelie','ophélie','Repris','repris'];
 
-  function save() {
-    if (curAddr && curUnits.length > 0) {
-      result.push({adresse:curAddr, agents:curAgents, rue:getStreetOnly(curAddr), unites:curUnits});
+  // Manual agent overrides by address keyword
+  const agentOverrides = [
+    { pattern: /100.*Pom|100.*Pomér/i, agents: ['Josée'] },
+    { pattern: /1102.*Grand-Pic|1104.*Grand-Pic|1110.*Grand-Pic|1146.*Grand-Pic/i, agents: ['Janie','Isabelle'] },
+    { pattern: /788.*Mont-Laval/i, agents: ['Myriam'] },
+  ];
+
+  function cleanAddr(text) {
+    const lines = String(text).split('\n');
+    for (const l of lines) {
+      if (addrPattern.test(l)) return l.trim();
     }
+    return lines[lines.length - 1].trim();
   }
 
-  for (var i = 0; i < rows.length; i++) {
-    var row = rows[i];
-    var cells = [];
-    for (var j = 0; j < row.length; j++) {
-      if (row[j] !== '' && row[j] !== null && row[j] !== undefined) cells.push(row[j]);
+  function getStreet(addr) {
+    const parts = addr.split(',');
+    if (parts.length >= 2) {
+      const street = parts[1].trim();
+      const city = parts[2] ? parts[2].replace(/\s*\(Québec\).*/, '').trim() : '';
+      return street + ', ' + city;
     }
-    if (!cells.length) continue;
+    return addr;
+  }
 
-    var first = String(cells[0]);
+  function parseAgents(text) {
+    if (!text) return [];
+    return String(text).split(',').map(a => {
+      const t = a.trim();
+      if (/repris/i.test(t)) return 'Repris par le proprio';
+      if (/oph/i.test(t)) return 'Ophélie';
+      if (/jos/i.test(t)) return 'Josée';
+      const cap = t.charAt(0).toUpperCase() + t.slice(1).toLowerCase();
+      return cap;
+    }).filter(a => a);
+  }
 
-    if (ADDR_RE.test(first)) {
-      save();
-      curAddr = cleanAddr(first);
-      curAgents = [];
-      curUnits = [];
-      // First try hardcoded lookup
-      var looked = lookupAgents(curAddr);
-      if (looked) {
-        curAgents = looked;
-      } else {
-        // Fall back to reading from Excel row
-        curAgents = [];
-        for (var ci = 1; ci < cells.length; ci++) {
-          if (/Jos|Mari|Isab|Lina|Jani|Myri|Oph|repris/i.test(String(cells[ci]))) {
-            curAgents = parseAgentText(String(cells[ci])); break;
+  // Parse a date string like "1 juil. 2026", "22 mars 2026", "1 avr. 2026"
+  function parseDispoDate(str) {
+    if (!str) return null;
+    const months = { jan:0, fév:1, mars:2, avr:3, mai:4, juin:5, juil:6, août:7, sep:8, oct:9, nov:10, déc:11 };
+    const m = str.match(/(\d+)\s+(\w+)\.?\s+(\d{4})/);
+    if (!m) return null;
+    const mo = months[m[2].toLowerCase().substring(0,4).replace('.','')];
+    if (mo === undefined) return null;
+    return new Date(parseInt(m[3]), mo, parseInt(m[1]));
+  }
+
+  function formatDispo(str) {
+    if (!str) return '';
+    const d = parseDispoDate(str);
+    if (d && d < today) return 'VACANT';
+    return str;
+  }
+
+  function extractUnitData(cells) {
+    let locataire = '', telephone = '', loyer = '', dispo = '', pieces = '';
+    for (const cell of cells) {
+      const cs = String(cell);
+      if (/Locataires/.test(cs)) {
+        locataire = cs.split('\n').filter(l => l && !/Locataires/.test(l)).join(', ');
+      } else if (/^[CD] :/.test(cs)) {
+        telephone = telephone ? telephone + ' / ' + cs.replace(/\n/g, ' / ') : cs.replace(/\n/g, ' / ');
+      } else if (/\$/.test(cs) && !/mois/.test(cs)) {
+        loyer = cs;
+      } else if (/^\d+ (juil|juin|mai|avr|mars|fév|jan|août|sep|oct|nov|déc)/.test(cs)) {
+        dispo = formatDispo(cs);
+    }
+    return { locataire, telephone, loyer, dispo };
+  }
+
+  const badApts = ['Liste des unités', 'Appartement', 'Condominium', 'Identification', 'Apparte'];
+
+  for (let i = 0; i < rows.length; i++) {
+    const row = rows[i];
+    const cells = row.filter(c => c !== '' && c !== null && c !== undefined);
+    if (cells.length === 0) continue;
+
+    const first = String(cells[0]);
+
+    // Address row
+    if (addrPattern.test(first)) {
+      if (currentAddr && currentUnits.length > 0) {
+        buildings.push({ adresse: currentAddr, agents: currentAgents, rue: getStreet(currentAddr), unites: currentUnits });
+      }
+      currentAddr = cleanAddr(first);
+
+      // Check agent overrides first
+      let overrideAgents = null;
+      for (const ov of agentOverrides) {
+        if (ov.pattern.test(currentAddr)) { overrideAgents = ov.agents; break; }
+      }
+
+      currentAgents = overrideAgents || [];
+      if (!overrideAgents) {
+        for (let ci = 1; ci < cells.length; ci++) {
+          const cell = String(cells[ci]);
+          if (agentNames.some(n => cell.toLowerCase().includes(n.toLowerCase()))) {
+            currentAgents = parseAgents(cell);
+            break;
           }
         }
       }
+      currentUnits = [];
       continue;
     }
 
-    if (!curAddr) continue;
-    // Skip header rows but NOT "Appartement 101" style unit rows
-    if (/^(Liste|Unit.s lou|Total)/i.test(first)) continue;
-    if (/^Appartement$/i.test(first.split('\n')[0].trim())) continue;
-    if (/^\d+\s+Unit/i.test(first)) continue;
+    if (!currentAddr) continue;
+    if (/^(Appartement|Liste des unités|Unités loués|Total)/.test(first)) continue;
+    if (/^\d+ Unités/.test(first)) continue;
 
-    var isBailOnly = /^Bail\s*\(\d+\)$/.test(first.trim());
+    const isBailOnly = /^Bail \(\d+\)$/.test(first.trim());
+    const bailMatch = first.match(/Bail \((\d+)\)/);
+    const aptLine = first.split('\n')[0].trim();
+    const isUnit = !isBailOnly && (bailMatch || (/^[\d\w,\s-]+$/.test(aptLine) && aptLine.length < 25 && !/^(Appartement|Locataire|Téléphone|Loyer|Disponible|Pièces|Liste)/.test(aptLine)));
+
     if (isBailOnly) {
-      if (curUnits.length > 0) {
-        var last = curUnits[curUnits.length-1];
-        var bd = extractData(cells.slice(1));
-        if (!last.loc && bd.loc) last.loc = bd.loc;
-        if (!last.tel && bd.tel) last.tel = bd.tel;
-        if (!last.loyer && bd.loyer) last.loyer = bd.loyer;
-        if (!last.dispo && bd.dispo) last.dispo = bd.dispo;
+      // Merge into last unit
+      if (currentUnits.length > 0) {
+        const last = currentUnits[currentUnits.length - 1];
+        const data = extractUnitData(cells.slice(1));
+        if (!last.locataire && data.locataire) last.locataire = data.locataire;
+        if (!last.telephone && data.telephone) last.telephone = data.telephone;
+        if (!last.pieces && data.pieces) last.pieces = data.pieces;
+        if (!last.loyer_prevu && data.loyer) last.loyer_prevu = data.loyer;
+        if (!last.disponible && data.dispo) last.disponible = data.dispo;
+
       }
       continue;
     }
 
-    var aptLine = first.split('\n')[0].trim();
-    // Strip "Appartement " prefix -> "Appartement 101" becomes "101"
-    var aptClean = aptLine.replace(/^Appartement\s+/i, '').trim();
-    // Skip if it's a full address line (contains city/province info)
-    if (ADDR_RE.test(aptLine)) continue;
-    // Skip pure header rows (exact match only, not "Appartement 101")
-    var skipRow = false;
-    for (var si = 0; si < BAD_APTS.length; si++) {
-      if (aptLine === BAD_APTS[si] || aptLine.indexOf(BAD_APTS[si] + '\n') === 0) { skipRow = true; break; }
-    }
-    if (skipRow) continue;
-    if (/^(Locataire|T.l.phone|Loyer|Disponible|Pi.ces|0 Unit)/i.test(aptLine)) continue;
-    if (/^Liste des unit/i.test(aptLine)) continue;
+    if (isUnit) {
+      const apt = aptLine;
+      const data = extractUnitData(cells.slice(1));
 
-    var isUnit = /Bail\s*\(\d+\)/.test(first) ||
-      (/^[\w\d,\s\u00c0-\u024f½-]+$/.test(aptClean) && aptClean.length < 35 &&
-       /\d/.test(aptClean));
-
-    if (isUnit && !/^Stationnement/i.test(aptClean)) {
-      var ud = extractData(cells.slice(1));
-      // Clean apt: "269, Angèle-Chartrand" -> "269", "1102, Du Grand Pic" -> "1102"
-      var aptFinal = aptClean.replace(/^(\d+[A-Za-z-]?),.*$/, '$1').trim();
-      // If aptFinal matches the building's civic number, it's not a real apt number -> leave empty
-      var civicNum = (curAddr || '').split(',')[0].trim();
-      if (aptFinal === civicNum) aptFinal = '';
-      var dedupeKey = (curAddr||'') + '|' + aptFinal + '|' + (ud.loc||'') + '|' + (ud.loyer||'');
-      if (!curSeen[dedupeKey]) {
-        curSeen[dedupeKey] = true;
-        curUnits.push({apt:aptFinal, loc:ud.loc, tel:ud.tel, loyer:ud.loyer, dispo:ud.dispo});
+      if (apt && !badApts.includes(apt) && !apt.startsWith('Stationnement')) {
+        currentUnits.push({
+          appartement: apt,
+          locataire: data.locataire,
+          telephone: data.telephone,
+          loyer_prevu: data.loyer,
+          disponible: data.dispo,
+          pieces: data.pieces
+        });
       }
     }
   }
-  save();
-  return result;
-}
 
-function safeSheetTitle(s) {
-  return s.replace(/[\[\]\*\/\\\?\:]/g, '-').substring(0, 30);
-}
-
-function groupByAgent(bldgs) {
-  var g = {};
-  for (var i = 0; i < bldgs.length; i++) {
-    var b = bldgs[i];
-    if (!b.unites.length) continue;
-    var key = b.agents.length ? b.agents.slice().sort().join(' & ') : 'Sans agent';
-    if (!g[key]) g[key] = [];
-    g[key].push(b);
+  if (currentAddr && currentUnits.length > 0) {
+    buildings.push({ adresse: currentAddr, agents: currentAgents, rue: getStreet(currentAddr), unites: currentUnits });
   }
-  return g;
+
+  return buildings;
 }
 
-function groupByStreet(bldgs) {
-  var s = {};
-  for (var i = 0; i < bldgs.length; i++) {
-    var b = bldgs[i];
-    var k = b.rue || b.adresse;
-    if (!s[k]) s[k] = [];
-    s[k].push(b);
-  }
-  return s;
-}
-
-document.getElementById('file-input').addEventListener('change', function() {
-  if (this.files && this.files[0]) loadFile(this.files[0]);
-});
-
-var zone = document.getElementById('zone');
-zone.addEventListener('dragover', function(e) { e.preventDefault(); zone.style.borderColor='var(--accent)'; });
-zone.addEventListener('dragleave', function() { zone.style.borderColor=''; });
-zone.addEventListener('drop', function(e) {
-  e.preventDefault(); zone.style.borderColor='';
-  if (e.dataTransfer.files[0]) loadFile(e.dataTransfer.files[0]);
-});
-
-function waitForXLSX(timeoutMs) {
-  timeoutMs = timeoutMs || 8000;
-  return new Promise(function(resolve, reject) {
-    var start = Date.now();
-    (function check() {
-      if (window.XLSX) return resolve(true);
-      if (Date.now() - start > timeoutMs) return reject(new Error("Librairie XLSX introuvable (CDN bloque)."));
-      setTimeout(check, 60);
-    })();
+function groupByAgent(buildings) {
+  const groups = {};
+  buildings.filter(b => b.unites.length > 0).forEach(b => {
+    const key = b.agents.length > 0 ? b.agents.slice().sort().join(' & ') : 'Sans agent';
+    if (!groups[key]) groups[key] = [];
+    groups[key].push(b);
   });
+  return groups;
 }
 
-function loadFile(file) {
-  document.getElementById('zone-icon').textContent = '...';
-  document.getElementById('zone-title').textContent = 'Lecture en cours...';
-  var reader = new FileReader();
-  reader.onload = async function(e) {
-    try {
-      await waitForXLSX();
-      var data = new Uint8Array(e.target.result);
-      var wb = XLSX.read(data, {type:'array', raw:false});
-      var ws = wb.Sheets[wb.SheetNames[0]];
-      var rows = XLSX.utils.sheet_to_json(ws, {header:1, defval:''});
-      if (!rows || !rows.length) throw new Error('Fichier vide');
-
-      buildings = parseExcel(rows);
-      var groups = groupByAgent(buildings);
-      var total = buildings.reduce(function(s,b){ return s+b.unites.length; }, 0);
-
-      document.getElementById('s-bat').textContent = buildings.length;
-      document.getElementById('s-ag').textContent = Object.keys(groups).length;
-      document.getElementById('s-on').textContent = Object.keys(groups).length;
-      document.getElementById('s-un').textContent = total;
-      document.getElementById('stats').style.display = 'grid';
-
-      // Debug: log buildings with units
-      var joseeBuildings = buildings.filter(function(b){ return b.agents.indexOf('Josee')>=0 || (lookupAgents(b.adresse)||[]).indexOf('Josee')>=0; });
-      console.log('Josee buildings:', joseeBuildings.map(function(b){ return b.adresse+' ('+b.unites.length+' units)'; }));
-      var b3875 = buildings.filter(function(b){ return b.adresse.indexOf('3875')>=0; });
-      console.log('3875:', b3875.map(function(b){ return b.adresse+' agents='+JSON.stringify(b.agents)+' units='+b.unites.length; }));
-      zone.classList.add('ok');
-      document.getElementById('zone-icon').textContent = 'OK';
-      document.getElementById('zone-title').textContent = file.name;
-      document.getElementById('zone-sub').textContent = buildings.length + ' batiments - ' + total + ' unites';
-
-      unlock('card2');
-      unlock('card4');
-    } catch(err) {
-      document.getElementById('zone-icon').textContent = 'ERR';
-      document.getElementById('zone-title').textContent = 'Erreur: ' + err.message;
-    }
-  };
-  reader.onerror = function() {
-    document.getElementById('zone-icon').textContent = 'ERR';
-    document.getElementById('zone-title').textContent = 'Impossible de lire le fichier';
-  };
-  reader.readAsArrayBuffer(file);
+function groupByStreet(buildings) {
+  const streets = {};
+  buildings.forEach(b => {
+    const s = b.rue || b.adresse;
+    if (!streets[s]) streets[s] = [];
+    streets[s].push(b);
+  });
+  return streets;
 }
 
-var tokenClient = null;
-
+// ─── AUTH ────────────────────────────────────────────────────────────
 function connecterGoogle() {
-  if (!tokenClient) {
-    alert("Google Identity Services pas pret. Recharge la page.");
+  document.getElementById('btn-auth').disabled = true;
+  document.getElementById('auth-text').textContent = '⏳ Ouverture...';
+  const params = new URLSearchParams({
+    client_id: CLIENT_ID,
+    redirect_uri: 'https://psylvestre1956-cyber.github.io/lelogeur-agent',
+    response_type: 'token',
+    scope: SCOPES,
+    prompt: 'consent'
+  });
+  window.location.href = 'https://accounts.google.com/o/oauth2/auth?' + params;
+}
+
+window.addEventListener('load', () => {
+  const hash = new URLSearchParams(window.location.hash.substring(1));
+  const token = hash.get('access_token');
+  if (token) {
+    accessToken = token;
+    window.history.replaceState({}, '', window.location.pathname);
+    const btn = document.getElementById('btn-auth');
+    btn.classList.add('connected');
+    document.getElementById('auth-text').textContent = '✓ Connecté à Google';
+    btn.disabled = true;
+    document.getElementById('card3').style.opacity = '1';
+    document.getElementById('card3').style.pointerEvents = 'auto';
+    document.getElementById('btn-run').disabled = false;
+  }
+
+  // Drag and drop
+  const zone = document.getElementById('drop-zone');
+  zone.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('dragover'); });
+  zone.addEventListener('dragleave', () => zone.classList.remove('dragover'));
+  zone.addEventListener('drop', e => { e.preventDefault(); zone.classList.remove('dragover'); chargerFichier(e.dataTransfer.files[0]); });
+});
+
+// ─── UTILITIES ───────────────────────────────────────────────────────
+function log(msg, type = '') {
+  const box = document.getElementById('log');
+  const l = document.createElement('div');
+  l.className = 'll ' + type;
+  l.textContent = msg;
+  box.appendChild(l);
+  box.scrollTop = box.scrollHeight;
+}
+
+function setProgress(pct, label) {
+  document.getElementById('progress').style.width = pct + '%';
+  if (label) document.getElementById('plabel').textContent = label;
+}
+
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+async function sheetsAPI(method, path, body) {
+  const res = await fetch('https://sheets.googleapis.com/v4/spreadsheets/' + path, {
+    method,
+    headers: { 'Authorization': 'Bearer ' + accessToken, 'Content-Type': 'application/json' },
+    body: body ? JSON.stringify(body) : undefined
+  });
+  if (!res.ok) {
+    const e = await res.json().catch(() => ({}));
+    throw new Error(e.error?.message || res.status);
+  }
+  return res.json();
+}
+
+function hexToRgb(hex) {
+  const r = parseInt(hex.slice(1,3),16)/255;
+  const g = parseInt(hex.slice(3,5),16)/255;
+  const b = parseInt(hex.slice(5,7),16)/255;
+  return { red: r, green: g, blue: b };
+}
+
+// ─── AGENT ───────────────────────────────────────────────────────────
+async function lancerAgent() {
+  const sheetId = document.getElementById('sheet-id').value.trim();
+  if (!sheetId || sheetId.includes('http')) {
+    alert('Entre seulement l\'ID du Sheet (pas l\'URL complète)!');
     return;
   }
-  tokenClient.requestAccessToken({ prompt: 'consent' });
-}
-
-window.addEventListener('load', function() {
-  function initGIS() {
-    if (window.google && google.accounts && google.accounts.oauth2) {
-      tokenClient = google.accounts.oauth2.initTokenClient({
-        client_id: CLIENT_ID,
-        scope: SCOPES,
-        callback: function(resp) {
-          if (resp && resp.access_token) {
-            token = resp.access_token;
-            var btn = document.getElementById('btn-auth');
-            btn.textContent = 'Connecte a Google';
-            btn.classList.add('green');
-            btn.disabled = true;
-            unlock('card3');
-            document.getElementById('btn-run').disabled = false;
-          }
-        }
-      });
-    } else {
-      setTimeout(initGIS, 200);
-    }
+  if (parsedBuildings.length === 0) {
+    alert('Charge d\'abord un fichier Excel!');
+    return;
   }
-  initGIS();
-});
-
-function sheetsAPI(method, path, body) {
-  return fetch('https://sheets.googleapis.com/v4/spreadsheets/' + path, {
-    method: method,
-    headers: {'Authorization':'Bearer '+token, 'Content-Type':'application/json'},
-    body: body ? JSON.stringify(body) : undefined
-  }).then(function(r) {
-    if (!r.ok) return r.json().then(function(e){ throw new Error(e.error ? e.error.message : r.status); });
-    return r.json();
-  });
-}
-
-function hexRgb(hex) {
-  return {red:parseInt(hex.slice(1,3),16)/255, green:parseInt(hex.slice(3,5),16)/255, blue:parseInt(hex.slice(5,7),16)/255};
-}
-
-async function lancerAgent() {
-  var sheetId = document.getElementById('sheet-id').value.trim();
-  if (!sheetId || sheetId.indexOf('http') >= 0) { alert("Entre seulement l'ID du Sheet!"); return; }
-  if (!buildings.length) { alert('Charge d\'abord un fichier Excel!'); return; }
 
   document.getElementById('btn-run').disabled = true;
-  document.getElementById('btn-run').textContent = 'En cours...';
+  document.getElementById('run-text').textContent = 'En cours...';
   document.getElementById('log').innerHTML = '';
-  document.getElementById('result').innerHTML = '';
+  document.getElementById('result-area').innerHTML = '';
 
   try {
-    log('Connexion...', 'hi');
-    prog(5, 'Lecture...');
+    log('→ Connexion au Sheet...', 'hi');
+    setProgress(3, 'Lecture du Sheet...');
 
-    var info = await sheetsAPI('GET', sheetId + '?fields=sheets.properties');
-    var existing = {};
-    info.sheets.forEach(function(s){ existing[s.properties.title] = s.properties.sheetId; });
-    log(Object.keys(existing).length + ' onglets existants', 'hi');
+    const info = await sheetsAPI('GET', sheetId + '?fields=sheets.properties');
+    const existingSheets = info.sheets.map(s => ({ title: s.properties.title, id: s.properties.sheetId }));
+    log('→ ' + existingSheets.length + ' onglets existants', 'hi');
 
-    var groups = groupByAgent(buildings);
-    var keys = Object.keys(groups).sort();
-    log(keys.length + ' groupes', 'hi');
+    const agentGroups = groupByAgent(parsedBuildings);
+    const agentKeys = Object.keys(agentGroups).sort();
+    log('→ ' + agentKeys.length + ' groupes d\'agents', 'hi');
+    setProgress(10, 'Création des onglets...');
 
-    var toCreate = keys.filter(function(k){ return !existing[safeSheetTitle(k)]; });
-    if (toCreate.length) {
-      var createRes = await sheetsAPI('POST', sheetId + ':batchUpdate', {
-        requests: toCreate.map(function(k){ return {addSheet:{properties:{title:safeSheetTitle(k)}}}; })
+    // Create missing sheets
+    const toCreate = agentKeys.filter(k => !existingSheets.find(s => s.title === k.substring(0,30)));
+    if (toCreate.length > 0) {
+      await sheetsAPI('POST', sheetId + ':batchUpdate', {
+        requests: toCreate.map(k => ({ addSheet: { properties: { title: k.substring(0,30) } } }))
       });
-      createRes.replies.forEach(function(r){
-        if (r.addSheet) existing[r.addSheet.properties.title] = r.addSheet.properties.sheetId;
-      });
-      log(toCreate.length + ' onglets crees', 'ok');
+      log('✓ ' + toCreate.length + ' onglets créés', 'ok');
     }
 
-    prog(20, 'Envoi donnees...');
+    setProgress(20, 'Envoi des données...');
 
-    var updates = [];
-    keys.forEach(function(key) {
-      var bldgs = groups[key];
-      var sm = groupByStreet(bldgs);
-      var tab = safeSheetTitle(key);
-      var rows = [];
-      rows.push(['Agent(s) : '+key,'','','','','']);
-      rows.push(['Mis a jour : '+new Date().toLocaleDateString('fr-CA'),'','','','','']);
-      rows.push(['','','','','','']);
-      rows.push(['Adresse','Appartement','Locataire','Telephone','Loyer prevu','Disponible']);
-      Object.keys(sm).sort().forEach(function(street) {
-        rows.push(['>>> '+street,'','','','','']);
-        sm[street].forEach(function(b) {
-          b.unites.forEach(function(u) {
-          if (b.adresse.indexOf('3875') >= 0) { console.log('3875 unit:', u.apt, u.loc, u.loyer); }
-            // Clean address: remove short prefix code and postal code, keep civic + street + city
-var addrParts = b.adresse.split(',');
-var addr = '';
-if (addrParts.length >= 3) {
-  // Format: "815 CROISS, 815 Croissant des Roselins, Laval (Québec) H7L 0K5"
-  // We want: "815 Croissant des Roselins, Laval"
-  var street = addrParts[1].trim();
-  var city = addrParts[2].replace(/\s*\(.*\).*/, '').trim();
-  addr = street + (city ? ', ' + city : '');
-} else {
-  addr = b.adresse.split(',').slice(1).join(',').trim().substring(0, 50);
-}
-            rows.push([addr, u.apt||'', u.loc||'', u.tel||'', u.loyer||'', u.dispo||'']);
-          });
-        });
-        rows.push(['','','','','','']);
+    // Build data for all sheets
+    // Columns: Adresse | Apt | Locataire | Téléphone | Loyer prévu | Disponible | Pièces  (no Bail)
+    const valueUpdates = [];
+
+    for (const agentKey of agentKeys) {
+      const buildings = agentGroups[agentKey];
+      const streetGroups = groupByStreet(buildings);
+      const tab = agentKey.substring(0, 30);
+      const rows = [];
+
+      rows.push(['Agent(s) : ' + agentKey, '', '', '', '', '', '']);
+      rows.push(['Mise à jour : ' + new Date().toLocaleDateString('fr-CA'), '', '', '', '', '', '']);
+      rows.push(['', '', '', '', '', '', '']);
+      rows.push(['Adresse', 'Appartement', 'Locataire', 'Téléphone', 'Loyer prévu', 'Disponible', 'Pièces']);
+
+      const sortedStreets = Object.keys(streetGroups).sort();
+      for (const street of sortedStreets) {
+        rows.push(['📍 ' + street, '', '', '', '', '', '']);
+        for (const b of streetGroups[street]) {
+          for (const u of b.unites) {
+            // Skip truly empty units
+            if (!u.appartement && !u.locataire && !u.loyer_prevu) continue;
+            rows.push([
+              b.adresse.split(',').slice(1).join(',').trim().substring(0, 50),
+              u.appartement || '',
+              u.locataire || '',
+              u.telephone || '',
+              u.loyer_prevu || '',
+              u.disponible || '',
+              u.pieces || ''
+            ]);
+          }
+        }
+        rows.push(['', '', '', '', '', '', '']);
+      }
+
+      valueUpdates.push({ range: "'" + tab + "'!A1", values: rows });
+    }
+
+    // Send data in batches of 5
+    for (let i = 0; i < valueUpdates.length; i += 5) {
+      await sheetsAPI('POST', sheetId + '/values:batchUpdate', {
+        valueInputOption: 'RAW',
+        data: valueUpdates.slice(i, i + 5)
       });
-      updates.push({range:"'"+tab+"'!A1", values:rows});
-    });
-
-    for (var i = 0; i < updates.length; i += 5) {
-      await sheetsAPI('POST', sheetId+'/values:batchUpdate', {valueInputOption:'RAW', data:updates.slice(i,i+5)});
       await sleep(300);
-      prog(20 + Math.round((i/updates.length)*40), 'Donnees '+ Math.min(i+5,updates.length)+'/'+updates.length+'...');
+      setProgress(20 + Math.round((i / valueUpdates.length) * 40), 'Données ' + Math.min(i+5, valueUpdates.length) + '/' + valueUpdates.length + '...');
     }
 
-    log('Donnees envoyees!', 'ok');
-    prog(65, 'Formatage...');
+    log('✓ Données envoyées!', 'ok');
+    setProgress(65, 'Application du formatage...');
 
-    var info2 = await sheetsAPI('GET', sheetId+'?fields=sheets.properties');
-    var sids = {};
-    info2.sheets.forEach(function(s){ sids[s.properties.title]=s.properties.sheetId; });
+    // Get sheet IDs for formatting
+    const updatedInfo = await sheetsAPI('GET', sheetId + '?fields=sheets.properties');
+    const sheetMap = {};
+    updatedInfo.sheets.forEach(s => { sheetMap[s.properties.title] = s.properties.sheetId; });
 
-    var PINK = hexRgb('#fadadd');
-    var WHITE = {red:1,green:1,blue:1};
-    var SBG = {red:.9,green:.92,blue:.96};
-    var BDR = {red:.78,green:.78,blue:.82};
-    var NAVY = hexRgb('#1e2d50');
-    var DTXT = {red:.1,green:.1,blue:.2};
-    var RED = {red:.85,green:.1,blue:.1};
-    var COLS = 6;
-    var fmts = [];
+    // Build formatting requests
+    const fmtReqs = [];
 
-    keys.forEach(function(key) {
-      var bldgs = groups[key];
-      var sm = groupByStreet(bldgs);
-      var tab = safeSheetTitle(key);
-      var sid = sids[tab];
-      if (sid === undefined) return;
+    // Style constants matching the Google Sheet reference
+    const HEADER_BG   = { red: 1.0, green: 0.85, blue: 0.90 }; // pink
+    const HEADER_TXT  = { red: 0.1, green: 0.1, blue: 0.2 };
+    const PINK_ROW    = { red: 1.0, green: 1.0, blue: 1.0 };   // white
+    const WHITE_ROW   = { red: 1, green: 1, blue: 1 };
+    const STREET_BG   = { red: 0.85, green: 0.88, blue: 0.96 };  // light blue-gray
+    const BORDER_CLR  = { red: 0.70, green: 0.70, blue: 0.75 };
+    const TITLE_BG    = { red: 1.0, green: 0.85, blue: 0.90 };  // pink
+    const VACANT_CLR  = { red: 0.85, green: 0.10, blue: 0.10 };  // red for VACANT
+    const COLS = 7;
 
-      function R(r1,r2,c1,c2){ return {sheetId:sid,startRowIndex:r1,endRowIndex:r2,startColumnIndex:c1,endColumnIndex:c2}; }
+    for (const agentKey of agentKeys) {
+      const buildings = agentGroups[agentKey];
+      const streetGroups = groupByStreet(buildings);
+      const tab = agentKey.substring(0, 30);
+      const sheetNum = sheetMap[tab];
+      if (sheetNum === undefined) continue;
 
-      fmts.push({repeatCell:{range:R(0,1,0,COLS),cell:{userEnteredFormat:{backgroundColor:PINK,textFormat:{bold:true,fontSize:12,foregroundColor:DTXT},verticalAlignment:'MIDDLE'}},fields:'userEnteredFormat(backgroundColor,textFormat,verticalAlignment)'}});
-      fmts.push({repeatCell:{range:R(1,2,0,COLS),cell:{userEnteredFormat:{backgroundColor:PINK,textFormat:{fontSize:10,foregroundColor:DTXT},verticalAlignment:'MIDDLE'}},fields:'userEnteredFormat(backgroundColor,textFormat,verticalAlignment)'}});
-      fmts.push({repeatCell:{range:R(3,4,0,COLS),cell:{userEnteredFormat:{backgroundColor:PINK,textFormat:{bold:true,fontSize:10,foregroundColor:DTXT},verticalAlignment:'MIDDLE',horizontalAlignment:'CENTER'}},fields:'userEnteredFormat(backgroundColor,textFormat,verticalAlignment,horizontalAlignment)'}});
-      fmts.push({updateBorders:{range:R(3,4,0,COLS),bottom:{style:'SOLID_MEDIUM',width:2,color:{red:.6,green:.2,blue:.3}},innerVertical:{style:'SOLID',width:1,color:BDR}}});
-      [200,110,200,175,110,110].forEach(function(w,ci){
-        fmts.push({updateDimensionProperties:{range:{sheetId:sid,dimension:'COLUMNS',startIndex:ci,endIndex:ci+1},properties:{pixelSize:w},fields:'pixelSize'}});
+      // Title row (row 0)
+      fmtReqs.push({ repeatCell: {
+        range: { sheetId: sheetNum, startRowIndex: 0, endRowIndex: 1, startColumnIndex: 0, endColumnIndex: COLS },
+        cell: { userEnteredFormat: {
+          backgroundColor: TITLE_BG,
+          textFormat: { foregroundColor: HEADER_TXT, bold: true, fontSize: 13 },
+          verticalAlignment: 'MIDDLE', horizontalAlignment: 'LEFT',
+          padding: { top: 8, bottom: 8, left: 10, right: 10 }
+        }},
+        fields: 'userEnteredFormat(backgroundColor,textFormat,verticalAlignment,horizontalAlignment,padding)'
+      }});
+
+      // Row 1 (date)
+      fmtReqs.push({ repeatCell: {
+        range: { sheetId: sheetNum, startRowIndex: 1, endRowIndex: 2, startColumnIndex: 0, endColumnIndex: COLS },
+        cell: { userEnteredFormat: {
+          backgroundColor: TITLE_BG,
+          textFormat: { foregroundColor: { red:0.2, green:0.2, blue:0.3 }, fontSize: 10 },
+          verticalAlignment: 'MIDDLE', horizontalAlignment: 'LEFT'
+        }},
+        fields: 'userEnteredFormat(backgroundColor,textFormat,verticalAlignment,horizontalAlignment)'
+      }});
+
+      // Header row (row 3) — dark navy + white bold centered
+      fmtReqs.push({ repeatCell: {
+        range: { sheetId: sheetNum, startRowIndex: 3, endRowIndex: 4, startColumnIndex: 0, endColumnIndex: COLS },
+        cell: { userEnteredFormat: {
+          backgroundColor: HEADER_BG,
+          textFormat: { foregroundColor: HEADER_TXT, bold: true, fontSize: 10 },
+          verticalAlignment: 'MIDDLE', horizontalAlignment: 'CENTER',
+          wrapStrategy: 'WRAP'
+        }},
+        fields: 'userEnteredFormat(backgroundColor,textFormat,verticalAlignment,horizontalAlignment,wrapStrategy)'
+      }});
+
+      // Border under header
+      fmtReqs.push({ updateBorders: {
+        range: { sheetId: sheetNum, startRowIndex: 3, endRowIndex: 4, startColumnIndex: 0, endColumnIndex: COLS },
+        bottom: { style: 'SOLID_MEDIUM', width: 2, color: { red:0.6, green:0.2, blue:0.3 } },
+        top:    { style: 'SOLID_MEDIUM', width: 2, color: { red:0.6, green:0.2, blue:0.3 } },
+        left:   { style: 'SOLID', width: 1, color: BORDER_CLR },
+        right:  { style: 'SOLID', width: 1, color: BORDER_CLR },
+        innerVertical: { style: 'SOLID', width: 1, color: BORDER_CLR }
+      }});
+
+      // Column widths: Adresse, Apt, Locataire, Téléphone, Loyer, Disponible, Pièces
+      [210, 110, 210, 180, 110, 110, 65].forEach((w, i) => {
+        fmtReqs.push({ updateDimensionProperties: {
+          range: { sheetId: sheetNum, dimension: 'COLUMNS', startIndex: i, endIndex: i+1 },
+          properties: { pixelSize: w }, fields: 'pixelSize'
+        }});
       });
-      fmts.push({updateSheetProperties:{properties:{sheetId:sid,gridProperties:{frozenRowCount:4}},fields:'gridProperties.frozenRowCount'}});
 
-      var rowIdx = 4;
-      Object.keys(sm).sort().forEach(function(street) {
-        fmts.push({repeatCell:{range:R(rowIdx,rowIdx+1,0,COLS),cell:{userEnteredFormat:{backgroundColor:SBG,textFormat:{bold:true,fontSize:10},verticalAlignment:'MIDDLE'}},fields:'userEnteredFormat(backgroundColor,textFormat,verticalAlignment)'}});
-        fmts.push({updateBorders:{range:R(rowIdx,rowIdx+1,0,COLS),top:{style:'SOLID_MEDIUM',width:2,color:NAVY},bottom:{style:'SOLID',width:1,color:BDR},innerVertical:{style:'SOLID',width:1,color:BDR}}});
+      // Row height for header
+      fmtReqs.push({ updateDimensionProperties: {
+        range: { sheetId: sheetNum, dimension: 'ROWS', startIndex: 3, endIndex: 4 },
+        properties: { pixelSize: 36 }, fields: 'pixelSize'
+      }});
+
+      // Freeze 4 rows
+      fmtReqs.push({ updateSheetProperties: {
+        properties: { sheetId: sheetNum, gridProperties: { frozenRowCount: 4 } },
+        fields: 'gridProperties.frozenRowCount'
+      }});
+
+      // Data rows
+      let rowIdx = 4;
+      let dataCount = 0;
+      const sortedStreets = Object.keys(streetGroups).sort();
+
+      for (const street of sortedStreets) {
+        // Street separator — blue-gray merged
+
+        fmtReqs.push({ repeatCell: {
+          range: { sheetId: sheetNum, startRowIndex: rowIdx, endRowIndex: rowIdx+1, startColumnIndex: 0, endColumnIndex: COLS },
+          cell: { userEnteredFormat: {
+            backgroundColor: STREET_BG,
+            textFormat: { bold: true, fontSize: 10, foregroundColor: { red:0.15, green:0.20, blue:0.40 } },
+            verticalAlignment: 'MIDDLE', horizontalAlignment: 'LEFT',
+            padding: { left: 8 }
+          }},
+          fields: 'userEnteredFormat(backgroundColor,textFormat,verticalAlignment,horizontalAlignment,padding)'
+        }});
+        fmtReqs.push({ updateBorders: {
+          range: { sheetId: sheetNum, startRowIndex: rowIdx, endRowIndex: rowIdx+1, startColumnIndex: 0, endColumnIndex: COLS },
+          top:    { style: 'SOLID_MEDIUM', width: 2, color: { red:0.18, green:0.24, blue:0.42 } },
+          bottom: { style: 'SOLID', width: 1, color: BORDER_CLR }
+        }});
         rowIdx++;
-        sm[street].forEach(function(b) {
-          b.unites.forEach(function(u) {
-            fmts.push({repeatCell:{range:R(rowIdx,rowIdx+1,0,COLS),cell:{userEnteredFormat:{backgroundColor:WHITE,textFormat:{fontSize:10},verticalAlignment:'MIDDLE'}},fields:'userEnteredFormat(backgroundColor,textFormat,verticalAlignment)'}});
-            fmts.push({updateBorders:{range:R(rowIdx,rowIdx+1,0,COLS),bottom:{style:'SOLID',width:1,color:BDR},top:{style:'SOLID',width:1,color:BDR},left:{style:'SOLID',width:1,color:BDR},right:{style:'SOLID',width:1,color:BDR},innerVertical:{style:'SOLID',width:1,color:BDR}}});
-            if (u.dispo === 'VACANT') {
-              fmts.push({repeatCell:{range:R(rowIdx,rowIdx+1,5,6),cell:{userEnteredFormat:{textFormat:{foregroundColor:RED,bold:true,fontSize:10},horizontalAlignment:'CENTER'}},fields:'userEnteredFormat(textFormat,horizontalAlignment)'}});
+
+        for (const b of streetGroups[street]) {
+          for (const u of b.unites) {
+            const isPink = false; // all white
+            const rowBg = isPink ? PINK_ROW : WHITE_ROW;
+
+            fmtReqs.push({ repeatCell: {
+              range: { sheetId: sheetNum, startRowIndex: rowIdx, endRowIndex: rowIdx+1, startColumnIndex: 0, endColumnIndex: COLS },
+              cell: { userEnteredFormat: {
+                backgroundColor: rowBg,
+                textFormat: { fontSize: 10 },
+                verticalAlignment: 'MIDDLE'
+              }},
+              fields: 'userEnteredFormat(backgroundColor,textFormat,verticalAlignment)'
+            }});
+
+            // All borders (vertical separators between columns)
+            fmtReqs.push({ updateBorders: {
+              range: { sheetId: sheetNum, startRowIndex: rowIdx, endRowIndex: rowIdx+1, startColumnIndex: 0, endColumnIndex: COLS },
+              bottom:        { style: 'SOLID', width: 1, color: BORDER_CLR },
+              top:           { style: 'SOLID', width: 1, color: BORDER_CLR },
+              left:          { style: 'SOLID', width: 1, color: BORDER_CLR },
+              right:         { style: 'SOLID', width: 1, color: BORDER_CLR },
+              innerVertical: { style: 'SOLID', width: 1, color: BORDER_CLR }
+            }});
+
+            // Color VACANT cells red
+            if (u.disponible === 'VACANT') {
+              fmtReqs.push({ repeatCell: {
+                range: { sheetId: sheetNum, startRowIndex: rowIdx, endRowIndex: rowIdx+1, startColumnIndex: 5, endColumnIndex: 6 },
+                cell: { userEnteredFormat: {
+                  textFormat: { foregroundColor: VACANT_CLR, bold: true, fontSize: 10 },
+                  horizontalAlignment: 'CENTER'
+                }},
+                fields: 'userEnteredFormat(textFormat,horizontalAlignment)'
+              }});
             }
-            rowIdx++;
-          });
-        });
-        rowIdx++;
-      });
-    });
 
-    for (var fi = 0; fi < fmts.length; fi += 40) {
-      await sheetsAPI('POST', sheetId+':batchUpdate', {requests:fmts.slice(fi,fi+40)});
-      await sleep(200);
-      prog(65+Math.round((fi/fmts.length)*33), 'Formatage '+Math.min(fi+40,fmts.length)+'/'+fmts.length+'...');
+            rowIdx++;
+            dataCount++;
+          }
+        }
+        rowIdx++; // blank spacing row
+      }
     }
 
-    prog(100, 'Termine!');
-    log('');
-    log(keys.length + ' onglets crees/mis a jour', 'ok');
-    log('En-tetes rose - Lignes blanches - VACANT en rouge', 'ok');
-    document.getElementById('result').innerHTML = '<a class="result-link" href="https://docs.google.com/spreadsheets/d/'+sheetId+'" target="_blank"><span>Ouvrir le Google Sheet</span><span>-&gt;</span></a>';
-    document.getElementById('btn-run').textContent = 'Termine!';
+    // Send formatting in batches of 50
+    for (let i = 0; i < fmtReqs.length; i += 50) {
+      await sheetsAPI('POST', sheetId + ':batchUpdate', { requests: fmtReqs.slice(i, i+50) });
+      await sleep(200);
+      const pct = 65 + Math.round((i / fmtReqs.length) * 33);
+      setProgress(pct, 'Formatage...');
+    }
 
-  } catch(err) {
-    log('Erreur: ' + err.message, 'err');
-    prog(0, 'Erreur');
+    setProgress(100, 'Terminé! 🎉');
+    log('');
+    log('✓ ' + agentKeys.length + ' onglets créés/mis à jour', 'ok');
+    log('✓ En-têtes colorés par agent', 'ok');
+    log('✓ Lignes alternées + séparations verticales', 'ok');
+    log('✓ Regroupé par rue', 'ok');
+
+    document.getElementById('result-area').innerHTML = '<a class="result-link" href="https://docs.google.com/spreadsheets/d/' + sheetId + '" target="_blank"><span>Ouvrir le Google Sheet</span><span>→</span></a>';
+    document.getElementById('run-text').textContent = '✓ Terminé!';
+
+  } catch(e) {
+    log('✗ Erreur: ' + e.message, 'err');
+    setProgress(0, 'Erreur');
     document.getElementById('btn-run').disabled = false;
-    document.getElementById('btn-run').textContent = 'Reessayer';
+    document.getElementById('run-text').textContent = 'Réessayer';
   }
+}
 }
 </script>
 </body>
