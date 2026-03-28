@@ -279,7 +279,7 @@ function parseExcel(rows) {
       } else if (/^\d+ (juil|juin|mai|avr|mars|fév|jan|août|sep|oct|nov|déc)/.test(cs)) {
         dispo = formatDispo(cs);
     }
-    return { locataire, telephone, loyer, dispo };
+    return { locataire, telephone, loyer, dispo, pieces };
   }
 
   const badApts = ['Liste des unités', 'Appartement', 'Condominium', 'Identification', 'Apparte'];
