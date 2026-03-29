@@ -550,111 +550,27 @@ async function lancerAgent() {
     }
 
     log('✓ Données envoyées!', 'ok');
-    setProgress(65, 'Application du formatage...');
+    setProgress(88, 'Formatage...');
 
-    // Get sheet IDs for formatting
-    const updatedInfo = await sheetsAPI('GET', sheetId + '?fields=sheets.properties');
-    const sheetMap = {};
-    updatedInfo.sheets.forEach(s => { sheetMap[s.properties.title] = s.properties.sheetId; });
+    // Get sheet IDs
+    const updInfo = await sheetsAPI('GET', sheetId + '?fields=sheets.properties');
+    const shMap = {};
+    updInfo.sheets.forEach(s => { shMap[s.properties.title] = s.properties.sheetId; });
 
-    // Build formatting requests
-    const fmtReqs = [];
-    const HEADER_BG   = { red: 0.18, green: 0.24, blue: 0.42 };
-    const HEADER_TXT  = { red: 1, green: 1, blue: 1 };
-    const PINK_ROW    = { red: 1.0, green: 0.85, blue: 0.90 };
-    const WHITE_ROW   = { red: 1, green: 1, blue: 1 };
-    const STREET_BG   = { red: 0.93, green: 0.93, blue: 0.96 };
-    const BORDER_CLR  = { red: 0.75, green: 0.75, blue: 0.78 };
-    const COLS = 7;
-
-    for (const agentKey of agentKeys) {
-      const buildings = agentGroups[agentKey];
-      const streetGroups = groupByStreet(buildings);
-      const tab = agentKey.substring(0, 30);
-      const sheetNum = sheetMap[tab];
-      if (sheetNum === undefined) continue;
-
-      // Rows 0,1,2 pink background
-      fmtReqs.push({ repeatCell: {
-        range: { sheetId: sheetNum, startRowIndex: 0, endRowIndex: 3, startColumnIndex: 0, endColumnIndex: COLS },
-        cell: { userEnteredFormat: { backgroundColor: PINK_ROW }},
-        fields: 'userEnteredFormat.backgroundColor'
-      }});
-
-      // Header row (row 3) dark blue
-      fmtReqs.push({ repeatCell: {
-        range: { sheetId: sheetNum, startRowIndex: 3, endRowIndex: 4, startColumnIndex: 0, endColumnIndex: COLS },
-        cell: { userEnteredFormat: {
-          backgroundColor: HEADER_BG,
-          textFormat: { foregroundColor: HEADER_TXT, bold: true, fontSize: 10 },
-          verticalAlignment: 'MIDDLE', horizontalAlignment: 'CENTER'
-        }},
-        fields: 'userEnteredFormat(backgroundColor,textFormat,verticalAlignment,horizontalAlignment)'
-      }});
-
-      // Column widths
-      [210, 110, 210, 180, 110, 110, 65].forEach((w, i) => {
-        fmtReqs.push({ updateDimensionProperties: {
-          range: { sheetId: sheetNum, dimension: 'COLUMNS', startIndex: i, endIndex: i+1 },
-          properties: { pixelSize: w }, fields: 'pixelSize'
-        }});
-      });
-
-      // Freeze 4 rows
-      fmtReqs.push({ updateSheetProperties: {
-        properties: { sheetId: sheetNum, gridProperties: { frozenRowCount: 4 } },
-        fields: 'gridProperties.frozenRowCount'
-      }});
-
-      // Data rows
-      let rowIdx = 4;
-      let dataCount = 0;
-      const sortedStreets = Object.keys(streetGroups).sort();
-
-      for (const street of sortedStreets) {
-        // Street separator
-        fmtReqs.push({ repeatCell: {
-          range: { sheetId: sheetNum, startRowIndex: rowIdx, endRowIndex: rowIdx+1, startColumnIndex: 0, endColumnIndex: COLS },
-          cell: { userEnteredFormat: { backgroundColor: STREET_BG, textFormat: { bold: true, fontSize: 10 }, verticalAlignment: 'MIDDLE' }},
-          fields: 'userEnteredFormat(backgroundColor,textFormat,verticalAlignment)'
-        }});
-        rowIdx++;
-        for (const b of streetGroups[street]) {
-          for (const u of b.unites) {
-            const rowBg = dataCount % 2 === 0 ? WHITE_ROW : PINK_ROW;
-            fmtReqs.push({ repeatCell: {
-              range: { sheetId: sheetNum, startRowIndex: rowIdx, endRowIndex: rowIdx+1, startColumnIndex: 0, endColumnIndex: COLS },
-              cell: { userEnteredFormat: { backgroundColor: rowBg, textFormat: { fontSize: 10 }, verticalAlignment: 'MIDDLE' }},
-              fields: 'userEnteredFormat(backgroundColor,textFormat,verticalAlignment)'
-            }});
-            fmtReqs.push({ updateBorders: {
-              range: { sheetId: sheetNum, startRowIndex: rowIdx, endRowIndex: rowIdx+1, startColumnIndex: 0, endColumnIndex: COLS },
-              bottom: { style: 'SOLID', width: 1, color: BORDER_CLR },
-              innerVertical: { style: 'SOLID', width: 1, color: BORDER_CLR }
-            }});
-            if (u.disponible === 'VACANT') {
-              fmtReqs.push({ repeatCell: {
-                range: { sheetId: sheetNum, startRowIndex: rowIdx, endRowIndex: rowIdx+1, startColumnIndex: 5, endColumnIndex: 6 },
-                cell: { userEnteredFormat: { textFormat: { foregroundColor: { red:0.85, green:0.1, blue:0.1 }, bold: true }}},
-                fields: 'userEnteredFormat.textFormat'
-              }});
-            }
-            rowIdx++; dataCount++;
-          }
-        }
-        rowIdx++;
-      }
+    // Apply formatting
+    const fmts = [];
+    const BLU={red:0.18,green:0.24,blue:0.42}, WHT={red:1,green:1,blue:1}, PNK={red:1,green:0.85,blue:0.90}, BCLR={red:0.75,green:0.75,blue:0.78};
+    for (const ak of agentKeys) {
+      const sn = shMap[ak.substring(0,30)];
+      if (sn===undefined) continue;
+      fmts.push({repeatCell:{range:{sheetId:sn,startRowIndex:0,endRowIndex:3,startColumnIndex:0,endColumnIndex:7},cell:{userEnteredFormat:{backgroundColor:PNK}},fields:'userEnteredFormat.backgroundColor'}});
+      fmts.push({repeatCell:{range:{sheetId:sn,startRowIndex:3,endRowIndex:4,startColumnIndex:0,endColumnIndex:7},cell:{userEnteredFormat:{backgroundColor:BLU,textFormat:{foregroundColor:WHT,bold:true,fontSize:10},horizontalAlignment:'CENTER'}},fields:'userEnteredFormat(backgroundColor,textFormat,horizontalAlignment)'}});
+      [210,110,210,180,110,110,65].forEach((w,i)=>fmts.push({updateDimensionProperties:{range:{sheetId:sn,dimension:'COLUMNS',startIndex:i,endIndex:i+1},properties:{pixelSize:w},fields:'pixelSize'}}));
+      fmts.push({updateSheetProperties:{properties:{sheetId:sn,gridProperties:{frozenRowCount:4}},fields:'gridProperties.frozenRowCount'}});
     }
+    for (let i=0;i<fmts.length;i+=50){await sheetsAPI('POST',sheetId+':batchUpdate',{requests:fmts.slice(i,i+50)});await sleep(200);}
 
-        // Send formatting in batches of 50
-    for (let i = 0; i < fmtReqs.length; i += 50) {
-      await sheetsAPI('POST', sheetId + ':batchUpdate', { requests: fmtReqs.slice(i, i+50) });
-      await sleep(200);
-      const pct = 65 + Math.round((i / fmtReqs.length) * 33);
-      setProgress(pct, 'Formatage...');
-    }
-
-    setProgress(100, 'Terminé! 🎉');
+        setProgress(100, 'Terminé! 🎉');
     log('');
     log('✓ ' + agentKeys.length + ' onglets créés/mis à jour', 'ok');
     log('✓ En-têtes colorés par agent', 'ok');
