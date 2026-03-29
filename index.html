@@ -3,483 +3,359 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Agent LeLogeur → Google Sheets</title>
+<title>Agent LeLogeur</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
-:root{--bg:#0e0e11;--sur:#16161b;--brd:#2a2a32;--acc:#7c6af7;--acc2:#4ecdc4;--txt:#e8e8f0;--mut:#6b6b80;--ok:#4ecdc4;--err:#ff6b6b;--warn:#ffd166}
+:root{--bg:#0e0e11;--sur:#16161b;--brd:#2a2a32;--acc:#7c6af7;--acc2:#4ecdc4;--txt:#e8e8f0;--mut:#6b6b80;--ok:#4ecdc4;--err:#ff6b6b}
 *{box-sizing:border-box;margin:0;padding:0}
-body{background:var(--bg);color:var(--txt);font-family:system-ui,sans-serif;min-height:100vh;padding:0}
+body{background:var(--bg);color:var(--txt);font-family:system-ui,sans-serif;min-height:100vh}
 body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellipse 80% 60% at 20% -10%,rgba(124,106,247,.12),transparent);pointer-events:none;z-index:0}
 .wrap{position:relative;z-index:1;max-width:760px;margin:0 auto;padding:40px 20px 80px}
-h1{font-size:28px;font-weight:700;letter-spacing:-.5px;margin-bottom:4px}
+h1{font-size:28px;font-weight:700;margin-bottom:4px}
 h1 span{color:var(--acc)}
 .sub{color:var(--mut);font-size:14px;margin-bottom:32px}
-.badge{display:inline-block;background:rgba(124,106,247,.15);color:var(--acc);border:1px solid rgba(124,106,247,.3);border-radius:20px;padding:3px 12px;font-size:11px;font-weight:600;letter-spacing:.06em;margin-bottom:12px}
-.card{background:var(--sur);border:1px solid var(--brd);border-radius:14px;padding:24px;margin-bottom:16px;transition:.3s}
+.badge{display:inline-block;background:rgba(124,106,247,.15);color:var(--acc);border:1px solid rgba(124,106,247,.3);border-radius:20px;padding:3px 12px;font-size:11px;font-weight:600;margin-bottom:12px}
+.card{background:var(--sur);border:1px solid var(--brd);border-radius:14px;padding:24px;margin-bottom:16px}
 .card.dim{opacity:.4;pointer-events:none}
 .card-title{font-size:13px;font-weight:600;color:var(--mut);letter-spacing:.08em;text-transform:uppercase;margin-bottom:16px;display:flex;align-items:center;gap:8px}
-.step-num{width:22px;height:22px;background:var(--acc);color:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0}
-.step-num.done{background:var(--ok)}
+.sn{width:22px;height:22px;background:var(--acc);color:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0}
+.sn.done{background:var(--ok)}
 label{display:block;font-size:13px;color:var(--mut);margin-bottom:6px}
-input[type=text]{width:100%;background:#0e0e11;border:1px solid var(--brd);color:var(--txt);border-radius:8px;padding:10px 14px;font-size:14px;font-family:monospace;outline:none;transition:.2s}
+input[type=text]{width:100%;background:#0e0e11;border:1px solid var(--brd);color:var(--txt);border-radius:8px;padding:10px 14px;font-size:14px;font-family:monospace;outline:none;transition:.2s;margin-bottom:12px}
 input[type=text]:focus{border-color:var(--acc)}
 .btn{display:inline-flex;align-items:center;gap:8px;padding:11px 22px;border-radius:10px;font-size:14px;font-weight:600;cursor:pointer;border:none;transition:.2s}
-.btn-primary{background:linear-gradient(135deg,var(--acc),#5e4de6);color:#fff}
-.btn-primary:hover{transform:translateY(-1px);box-shadow:0 8px 24px rgba(124,106,247,.4)}
-.btn-primary:disabled{opacity:.4;cursor:not-allowed;transform:none;box-shadow:none}
-.btn-ghost{background:transparent;color:var(--acc);border:1px solid rgba(124,106,247,.4)}
-.btn-ghost:hover{background:rgba(124,106,247,.1)}
+.btn-p{background:linear-gradient(135deg,var(--acc),#5e4de6);color:#fff}
+.btn-p:hover{transform:translateY(-1px);box-shadow:0 8px 24px rgba(124,106,247,.4)}
+.btn-p:disabled{opacity:.4;cursor:not-allowed;transform:none;box-shadow:none}
+.btn-g{background:transparent;color:var(--acc);border:1px solid rgba(124,106,247,.4)}
+.btn-g:hover{background:rgba(124,106,247,.1)}
 .btn-ok{background:linear-gradient(135deg,#1a6b4a,#0d4a32);color:var(--ok)}
-.drop{border:2px dashed var(--brd);border-radius:12px;padding:32px;text-align:center;cursor:pointer;transition:.2s;position:relative}
+.drop{border:2px dashed var(--brd);border-radius:12px;padding:32px;text-align:center;cursor:pointer;position:relative}
 .drop:hover,.drop.over{border-color:var(--acc);background:rgba(124,106,247,.05)}
 .drop input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%}
 .drop-ico{font-size:32px;margin-bottom:8px}
 .drop-txt{font-size:15px;font-weight:600}
 .drop-sub{font-size:13px;color:var(--mut);margin-top:4px}
-.log-box{background:#0a0a0d;border:1px solid var(--brd);border-radius:10px;padding:14px;height:180px;overflow-y:auto;font-family:monospace;font-size:12.5px;line-height:1.7}
-.ll{color:var(--mut)}
-.ll.ok{color:var(--ok)}
-.ll.err{color:var(--err)}
-.ll.info{color:var(--acc2)}
-.ll.warn{color:var(--warn)}
-.progress-wrap{background:var(--brd);border-radius:4px;height:4px;margin-top:12px;overflow:hidden}
-.progress-bar{height:100%;background:linear-gradient(90deg,var(--acc),var(--acc2));border-radius:4px;width:0;transition:width .4s ease}
-.result-link{display:flex;align-items:center;justify-content:space-between;padding:14px 18px;background:rgba(78,205,196,.08);border:1px solid rgba(78,205,196,.2);border-radius:10px;color:var(--acc2);font-weight:600;font-size:14px;text-decoration:none;margin-top:10px;transition:.2s}
-.result-link:hover{background:rgba(78,205,196,.14)}
-.warn-box{background:rgba(255,209,102,.07);border:1px solid rgba(255,209,102,.25);border-radius:10px;padding:14px 16px;font-size:13px;color:var(--warn);margin-bottom:16px}
+.log{background:#0a0a0d;border:1px solid var(--brd);border-radius:10px;padding:14px;height:180px;overflow-y:auto;font-family:monospace;font-size:12.5px;line-height:1.7;margin-top:12px}
+.ll{color:var(--mut)}.ll.ok{color:var(--ok)}.ll.er{color:var(--err)}.ll.in{color:var(--acc2)}
+.pw{background:var(--brd);border-radius:4px;height:4px;margin-top:12px;overflow:hidden}
+.pb{height:100%;background:linear-gradient(90deg,var(--acc),var(--acc2));border-radius:4px;width:0;transition:width .4s}
+.rl{display:flex;align-items:center;justify-content:space-between;padding:14px 18px;background:rgba(78,205,196,.08);border:1px solid rgba(78,205,196,.2);border-radius:10px;color:var(--acc2);font-weight:600;font-size:14px;text-decoration:none;margin-top:10px}
 .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:14px}
 .stat{background:#0a0a0d;border:1px solid var(--brd);border-radius:10px;padding:14px;text-align:center}
-.stat-n{font-size:26px;font-weight:700;color:var(--acc)}
-.stat-l{font-size:11px;color:var(--mut);margin-top:2px}
+.stn{font-size:26px;font-weight:700;color:var(--acc)}
+.stl{font-size:11px;color:var(--mut);margin-top:2px}
 .tags{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
 .tag{background:rgba(124,106,247,.15);color:var(--acc);border-radius:6px;padding:3px 10px;font-size:12px}
 </style>
 </head>
 <body>
 <div class="wrap">
-  <div class="badge">LeLogeur — Agent v7</div>
-  <h1>Agent <span>LeLogeur</span></h1>
-  <p class="sub">Lit le fichier Excel Proprio Expert et exporte vers Google Sheets</p>
+<div class="badge">LeLogeur &#8212; Agent v7</div>
+<h1>Agent <span>LeLogeur</span></h1>
+<p class="sub">Lit le fichier Excel Proprio Expert et exporte vers Google Sheets</p>
 
-  <!-- ÉTAPE 1 — Connexion Google -->
-  <div class="card" id="card1">
-    <div class="card-title"><span class="step-num" id="s1">1</span> Connexion Google</div>
-    <label>Client ID OAuth (Google Cloud Console)</label>
-    <input type="text" id="client-id" placeholder="xxxxxx.apps.googleusercontent.com" style="margin-bottom:12px">
-    <div style="display:flex;gap:10px;flex-wrap:wrap">
-      <button class="btn btn-primary" onclick="connecterGoogle()" id="btn-auth">
-        <span id="auth-ico">🔑</span> <span id="auth-txt">Connecter Google</span>
-      </button>
-      <a href="https://console.cloud.google.com/apis/credentials" target="_blank" class="btn btn-ghost">Cloud Console ↗</a>
-    </div>
-  </div>
+<div class="card" id="card1">
+<div class="card-title"><span class="sn" id="s1">1</span> Connexion Google</div>
+<label>Client ID OAuth (Google Cloud Console)</label>
+<input type="text" id="client-id" placeholder="xxxxxx.apps.googleusercontent.com">
+<div style="display:flex;gap:10px;flex-wrap:wrap">
+<button class="btn btn-p" onclick="connecterGoogle()" id="btn-auth">
+<span id="auth-ico">&#128273;</span> <span id="auth-txt">Connecter Google</span>
+</button>
+<a href="https://console.cloud.google.com/apis/credentials" target="_blank" class="btn btn-g">Cloud Console &#8599;</a>
+</div>
+</div>
 
-  <!-- ÉTAPE 2 — Fichier Excel -->
-  <div class="card dim" id="card2">
-    <div class="card-title"><span class="step-num" id="s2">2</span> Fichier Excel (Proprio Expert)</div>
-    <div class="drop" id="drop" ondrop="onDrop(event)" ondragover="onDragOver(event)" ondragleave="onDragLeave(event)">
-      <input type="file" accept=".xls,.xlsx" onchange="onFilePick(event)">
-      <div class="drop-ico">📂</div>
-      <div class="drop-txt" id="drop-txt">Glisse le fichier Excel ici</div>
-      <div class="drop-sub" id="drop-sub">ou clique pour choisir (.xls / .xlsx)</div>
-    </div>
-    <div class="stats" id="stats" style="display:none">
-      <div class="stat"><div class="stat-n" id="st-bat">0</div><div class="stat-l">Bâtiments</div></div>
-      <div class="stat"><div class="stat-n" id="st-uni">0</div><div class="stat-l">Unités</div></div>
-      <div class="stat"><div class="stat-n" id="st-agt">0</div><div class="stat-l">Agents</div></div>
-    </div>
-    <div id="agents-tags" style="margin-top:10px"></div>
-  </div>
+<div class="card dim" id="card2">
+<div class="card-title"><span class="sn" id="s2">2</span> Fichier Excel (Proprio Expert)</div>
+<div class="drop" id="drop" ondrop="onDrop(event)" ondragover="onDragOver(event)" ondragleave="onDragLeave(event)">
+<input type="file" accept=".xls,.xlsx" onchange="onFilePick(event)">
+<div class="drop-ico">&#128193;</div>
+<div class="drop-txt" id="drop-txt">Glisse le fichier Excel ici</div>
+<div class="drop-sub" id="drop-sub">ou clique pour choisir (.xls / .xlsx)</div>
+</div>
+<div class="stats" id="stats" style="display:none">
+<div class="stat"><div class="stn" id="st-bat">0</div><div class="stl">B&#226;timents</div></div>
+<div class="stat"><div class="stn" id="st-uni">0</div><div class="stl">Unit&#233;s</div></div>
+<div class="stat"><div class="stn" id="st-agt">0</div><div class="stl">Agents</div></div>
+</div>
+<div id="agents-tags" style="margin-top:10px"></div>
+</div>
 
-  <!-- ÉTAPE 3 — Google Sheet -->
-  <div class="card dim" id="card3">
-    <div class="card-title"><span class="step-num" id="s3">3</span> Google Sheet de destination</div>
-    <label>ID du Google Sheet</label>
-    <input type="text" id="sheet-id" value="1a5IxEWxm51rbfhgKk-A0NJSpvcd5HqdktE8bauRCIz8" placeholder="Colle l'ID ici">
-    <p style="font-size:12px;color:var(--mut);margin-top:8px">Trouvable dans l'URL : docs.google.com/spreadsheets/d/<strong>ID_ICI</strong>/edit</p>
-  </div>
+<div class="card dim" id="card3">
+<div class="card-title"><span class="sn" id="s3">3</span> Google Sheet de destination</div>
+<label>ID du Google Sheet</label>
+<input type="text" id="sheet-id" value="1a5IxEWxm51rbfhgKk-A0NJSpvcd5HqdktE8bauRCIz8">
+<p style="font-size:12px;color:var(--mut)">Trouvable dans l&#39;URL : docs.google.com/spreadsheets/d/<strong>ID_ICI</strong>/edit</p>
+</div>
 
-  <!-- ÉTAPE 4 — Lancer -->
-  <div class="card dim" id="card4">
-    <div class="card-title"><span class="step-num" id="s4">4</span> Lancer l'agent</div>
-    <button class="btn btn-primary" id="btn-run" onclick="lancerAgent()" style="width:100%;justify-content:center;padding:15px">
-      <span id="run-ico">🚀</span> <span id="run-txt">Lancer l'agent</span>
-    </button>
-    <div class="progress-wrap" style="margin-top:12px"><div class="progress-bar" id="prog"></div></div>
-    <div class="log-box" id="log" style="margin-top:12px"></div>
-    <div id="link-area"></div>
-  </div>
+<div class="card dim" id="card4">
+<div class="card-title"><span class="sn" id="s4">4</span> Lancer l&#39;agent</div>
+<button class="btn btn-p" id="btn-run" onclick="lancerAgent()" style="width:100%;justify-content:center;padding:15px">
+<span id="run-ico">&#128640;</span> <span id="run-txt">Lancer l&#39;agent</span>
+</button>
+<div class="pw"><div class="pb" id="prog"></div></div>
+<div class="log" id="log"></div>
+<div id="link-area"></div>
+</div>
 </div>
 
 <script>
-// ── Configuration ──────────────────────────────────────────────────────
-let accessToken = '';
-let parsedUnits = [];
+var accessToken = "";
+var parsedUnits = [];
+var REDIRECT = "https://psylvestre1956-cyber.github.io/lelogeur-agent/";
 
-// ── Helpers ────────────────────────────────────────────────────────────
 function log(msg, type) {
-  const b = document.getElementById('log');
-  const d = document.createElement('div');
-  d.className = 'll' + (type ? ' ' + type : '');
+  var b = document.getElementById("log");
+  var d = document.createElement("div");
+  d.className = "ll" + (type ? " " + type : "");
   d.textContent = msg;
   b.appendChild(d);
   b.scrollTop = b.scrollHeight;
 }
 
 function setProgress(pct) {
-  document.getElementById('prog').style.width = pct + '%';
+  document.getElementById("prog").style.width = pct + "%";
 }
 
 function unlock(id) {
-  const el = document.getElementById(id);
-  el.classList.remove('dim');
+  document.getElementById(id).classList.remove("dim");
 }
 
-function markDone(stepId) {
-  const el = document.getElementById(stepId);
-  el.classList.add('done');
-  el.textContent = '✓';
+function markDone(id) {
+  var el = document.getElementById(id);
+  el.classList.add("done");
+  el.textContent = "✓";
 }
 
-// ── Étape 1 : Google OAuth ─────────────────────────────────────────────
 function connecterGoogle() {
-  const clientId = document.getElementById('client-id').value.trim();
-  if (!clientId) { alert('Entre le Client ID Google d'abord!'); return; }
-
-  const params = new URLSearchParams({
+  var clientId = document.getElementById("client-id").value.trim();
+  if (!clientId) { alert("Entre le Client ID Google!"); return; }
+  var params = new URLSearchParams({
     client_id: clientId,
-    redirect_uri: window.location.href.split('#')[0],
-    response_type: 'token',
-    scope: 'https://www.googleapis.com/auth/spreadsheets',
-    prompt: 'consent'
+    redirect_uri: REDIRECT,
+    response_type: "token",
+    scope: "https://www.googleapis.com/auth/spreadsheets",
+    prompt: "consent"
   });
-  window.location.href = 'https://accounts.google.com/o/oauth2/v2/auth?' + params;
+  window.location.href = "https://accounts.google.com/o/oauth2/v2/auth?" + params.toString();
 }
 
-// Récupère token au retour OAuth
 (function checkToken() {
-  const hash = new URLSearchParams(window.location.hash.substring(1));
-  const tok = hash.get('access_token');
+  var hash = new URLSearchParams(window.location.hash.substring(1));
+  var tok = hash.get("access_token");
   if (tok) {
     accessToken = tok;
-    window.history.replaceState({}, '', window.location.pathname);
-    document.getElementById('auth-txt').textContent = '✓ Connecté à Google';
-    document.getElementById('auth-ico').textContent = '✓';
-    document.getElementById('btn-auth').style.background = 'linear-gradient(135deg,#1a6b4a,#0d4a32)';
-    markDone('s1');
-    unlock('card2');
-    unlock('card3');
-    unlock('card4');
+    window.history.replaceState({}, "", window.location.pathname);
+    document.getElementById("auth-txt").textContent = "Connecte Google";
+    document.getElementById("auth-ico").textContent = "✓";
+    document.getElementById("btn-auth").style.background = "linear-gradient(135deg,#1a6b4a,#0d4a32)";
+    markDone("s1");
+    unlock("card2");
+    unlock("card3");
+    unlock("card4");
   }
 })();
 
-// ── Étape 2 : Lecture Excel ────────────────────────────────────────────
-function onDragOver(e) { e.preventDefault(); document.getElementById('drop').classList.add('over'); }
-function onDragLeave()  { document.getElementById('drop').classList.remove('over'); }
+function onDragOver(e) { e.preventDefault(); document.getElementById("drop").classList.add("over"); }
+function onDragLeave() { document.getElementById("drop").classList.remove("over"); }
 function onDrop(e) { e.preventDefault(); onDragLeave(); processFile(e.dataTransfer.files[0]); }
 function onFilePick(e) { processFile(e.target.files[0]); }
 
-async function processFile(file) {
+function processFile(file) {
   if (!file) return;
-  document.getElementById('drop-txt').textContent = '⏳ Lecture en cours…';
-  document.getElementById('drop-sub').textContent = file.name;
-
-  try {
-    const buf = await file.arrayBuffer();
-    const wb = XLSX.read(buf, { type: 'array', cellDates: true, raw: false });
-    const ws = wb.Sheets[wb.SheetNames[0]];
-    const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
-
-    parsedUnits = parseExcel(rows);
-
-    if (parsedUnits.length === 0) {
-      document.getElementById('drop-txt').textContent = '⚠️ Aucune donnée trouvée';
-      document.getElementById('drop-sub').textContent = 'Vérifie le format du fichier';
-      return;
+  document.getElementById("drop-txt").textContent = "Lecture en cours...";
+  document.getElementById("drop-sub").textContent = file.name;
+  var reader = new FileReader();
+  reader.onload = function(ev) {
+    try {
+      var data = new Uint8Array(ev.target.result);
+      var wb = XLSX.read(data, { type: "array" });
+      var ws = wb.Sheets[wb.SheetNames[0]];
+      var rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: "" });
+      parsedUnits = parseExcel(rows);
+      if (parsedUnits.length === 0) {
+        document.getElementById("drop-txt").textContent = "Aucune donnee trouvee";
+        return;
+      }
+      var grouped = groupByAgent(parsedUnits);
+      var agents = Object.keys(grouped);
+      var nbBat = [];
+      parsedUnits.forEach(function(u) { if (u.adresse && nbBat.indexOf(u.adresse) < 0) nbBat.push(u.adresse); });
+      document.getElementById("drop-txt").textContent = "Fichier charge : " + file.name;
+      document.getElementById("drop-sub").textContent = parsedUnits.length + " unites trouvees";
+      document.getElementById("st-bat").textContent = nbBat.length;
+      document.getElementById("st-uni").textContent = parsedUnits.length;
+      document.getElementById("st-agt").textContent = agents.length;
+      document.getElementById("stats").style.display = "grid";
+      var tags = document.getElementById("agents-tags");
+      tags.innerHTML = '<div class="tags">' + agents.map(function(a) {
+        return '<span class="tag">' + a + ' (' + grouped[a].length + ')</span>';
+      }).join("") + "</div>";
+      markDone("s2");
+    } catch(err) {
+      document.getElementById("drop-txt").textContent = "Erreur : " + err.message;
     }
-
-    const grouped = groupByAgent(parsedUnits);
-    const agents = Object.keys(grouped);
-    const nbBat = new Set(parsedUnits.map(u => u.adresse).filter(Boolean)).size;
-
-    document.getElementById('drop-txt').textContent = '✅ Fichier chargé : ' + file.name;
-    document.getElementById('drop-sub').textContent = parsedUnits.length + ' unités trouvées';
-    document.getElementById('st-bat').textContent = nbBat;
-    document.getElementById('st-uni').textContent = parsedUnits.length;
-    document.getElementById('st-agt').textContent = agents.length;
-    document.getElementById('stats').style.display = 'grid';
-
-    // Show agent tags
-    const tags = document.getElementById('agents-tags');
-    tags.innerHTML = '<div class="tags">' + agents.map(a => '<span class="tag">👤 ' + a + ' (' + grouped[a].length + ')</span>').join('') + '</div>';
-
-    markDone('s2');
-  } catch (err) {
-    document.getElementById('drop-txt').textContent = '❌ Erreur de lecture';
-    document.getElementById('drop-sub').textContent = err.message;
-  }
+  };
+  reader.readAsArrayBuffer(file);
 }
 
-// ── Parsing Excel (Proprio Expert) ────────────────────────────────────
 function parseExcel(rows) {
   if (!rows || rows.length < 2) return [];
-
-  // Détection auto de l'en-tête
-  let headerIdx = -1;
-  for (let i = 0; i < Math.min(15, rows.length); i++) {
-    const r = rows[i].map(c => String(c).toLowerCase());
-    if (r.some(c => c.includes('adresse') || c.includes('appartement') || c.includes('logement') || c.includes('locataire'))) {
-      headerIdx = i;
-      break;
+  var headerIdx = -1;
+  for (var i = 0; i < Math.min(15, rows.length); i++) {
+    var r = rows[i].map(function(c) { return String(c).toLowerCase(); });
+    if (r.some(function(c) { return c.indexOf("adresse") >= 0 || c.indexOf("appartement") >= 0 || c.indexOf("locataire") >= 0; })) {
+      headerIdx = i; break;
     }
   }
-  if (headerIdx === -1) headerIdx = 0;
-
-  const headers = rows[headerIdx].map(c => String(c).toLowerCase().trim());
-
-  // Mapping flexible des colonnes
+  if (headerIdx < 0) headerIdx = 0;
+  var headers = rows[headerIdx].map(function(c) { return String(c).toLowerCase().trim(); });
   function col(kws) {
-    for (const kw of kws) {
-      const i = headers.findIndex(h => h.includes(kw));
-      if (i >= 0) return i;
+    for (var k = 0; k < kws.length; k++) {
+      for (var j = 0; j < headers.length; j++) {
+        if (headers[j].indexOf(kws[k]) >= 0) return j;
+      }
     }
     return -1;
   }
-
-  const CI = {
-    adresse:    col(['adresse','immeuble','bâtiment','batiment','building']),
-    app:        col(['appartement','app','logement','unité','unite','no app','no ']),
-    locataire:  col(['locataire','tenant','nom locataire','nom du']),
-    telephone:  col(['téléphone','telephone','tél','tel','phone','cellulaire']),
-    loyer:      col(['loyer prévu','loyer prevu','loyer','montant','prix','rent']),
-    dispo:      col(['disponible','dispo','libre','date libre','date dispo']),
-    pieces:     col(['pièces','pieces','grandeur','type','chambre','pi']),
-    agent:      col(['agent','responsable','gestionnaire','conseiller','rep'])
+  var CI = {
+    adresse: col(["adresse","immeuble","batiment"]),
+    app: col(["appartement","app","logement","unite"]),
+    locataire: col(["locataire","tenant"]),
+    telephone: col(["telephone","tel","phone","cellulaire"]),
+    loyer: col(["loyer","montant","prix","rent"]),
+    dispo: col(["disponible","dispo","libre"]),
+    pieces: col(["pieces","grandeur","type","chambre"]),
+    agent: col(["agent","responsable","gestionnaire"])
   };
-
-  const units = [];
-  let currentAdresse = '';
-  let currentAgent = '';
-
-  for (let i = headerIdx + 1; i < rows.length; i++) {
-    const row = rows[i];
-    const rowStr = row.map(c => String(c).trim()).join(' ').trim();
-    if (!rowStr) continue; // ligne vide
-
-    // Si ligne d'adresse (souvent une ligne avec peu de colonnes remplies)
-    const v = c => CI[c] >= 0 ? String(row[CI[c]] || '').trim() : '';
-
-    let adresse = v('adresse');
-    const app = v('app');
-    const locataire = v('locataire');
-    const telephone = v('telephone');
-    const loyer = v('loyer');
-    const dispo = v('dispo');
-    const pieces = v('pieces');
-    const agent = v('agent');
-
-    // Mise à jour adresse courante si présente
-    if (adresse) currentAdresse = adresse;
-    if (agent) currentAgent = agent;
-
-    // Ignorer si pas de numéro d'appartement (probablement une ligne de titre)
+  var units = [];
+  var curAdresse = "";
+  var curAgent = "";
+  for (var i = headerIdx + 1; i < rows.length; i++) {
+    var row = rows[i];
+    var v = function(k) { return CI[k] >= 0 ? String(row[CI[k]] || "").trim() : ""; };
+    var adresse = v("adresse");
+    var app = v("app");
+    var locataire = v("locataire");
+    var telephone = v("telephone");
+    var loyer = v("loyer");
+    var dispo = v("dispo");
+    var pieces = v("pieces");
+    var agent = v("agent");
+    if (adresse) curAdresse = adresse;
+    if (agent) curAgent = agent;
     if (!app && !locataire && !loyer) continue;
-
     units.push({
-      adresse: adresse || currentAdresse,
+      adresse: adresse || curAdresse,
       appartement: app,
       locataire: locataire,
       telephone: telephone,
       loyer_prevu: loyer,
       disponible: dispo,
       pieces: pieces,
-      agent: agent || currentAgent || 'Non assigné'
+      agent: agent || curAgent || "Non assigne"
     });
   }
-
   return units;
 }
 
-// ── Grouper par agent ──────────────────────────────────────────────────
 function groupByAgent(units) {
-  const grouped = {};
-  for (const u of units) {
-    const key = u.agent || 'Non assigné';
+  var grouped = {};
+  units.forEach(function(u) {
+    var key = u.agent || "Non assigne";
     if (!grouped[key]) grouped[key] = [];
     grouped[key].push(u);
-  }
-  // Trier par agent
-  const sorted = {};
-  Object.keys(grouped).sort().forEach(k => sorted[k] = grouped[k]);
-  return sorted;
-}
-
-// ── Google Sheets API ──────────────────────────────────────────────────
-async function sheetsAPI(method, endpoint, body) {
-  const sheetId = document.getElementById('sheet-id').value.trim();
-  const url = 'https://sheets.googleapis.com/v4/spreadsheets/' + sheetId + endpoint;
-  const res = await fetch(url, {
-    method,
-    headers: {
-      'Authorization': 'Bearer ' + accessToken,
-      'Content-Type': 'application/json'
-    },
-    body: body ? JSON.stringify(body) : undefined
   });
-  const data = await res.json();
-  if (!res.ok) throw new Error((data.error && data.error.message) || res.status);
-  return data;
+  return grouped;
 }
 
-// ── Agent principal ────────────────────────────────────────────────────
-async function lancerAgent() {
-  if (!accessToken) { alert('Connecte-toi à Google d'abord!'); return; }
-  if (parsedUnits.length === 0) { alert('Charge un fichier Excel d'abord!'); return; }
-
-  const sheetId = document.getElementById('sheet-id').value.trim();
-  if (!sheetId) { alert('Entre l'ID du Google Sheet!'); return; }
-
-  const btn = document.getElementById('btn-run');
-  btn.disabled = true;
-  document.getElementById('run-txt').textContent = 'En cours…';
-  document.getElementById('log').innerHTML = '';
-  document.getElementById('link-area').innerHTML = '';
-  setProgress(0);
-
-  try {
-    const grouped = groupByAgent(parsedUnits);
-    const agents = Object.keys(grouped);
-
-    log('🚀 Démarrage agent LeLogeur v7', 'info');
-    log('📊 ' + parsedUnits.length + ' unités · ' + agents.length + ' agents');
-    setProgress(5);
-
-    // Récupérer les onglets existants
-    log('📋 Récupération du Google Sheet…');
-    const spreadsheet = await sheetsAPI('GET', '?fields=sheets.properties');
-    const existingSheets = spreadsheet.sheets.map(s => s.properties);
-    log('  ' + existingSheets.length + ' onglet(s) existant(s)');
-    setProgress(10);
-
-    // Créer un onglet par agent (ou màj si existe)
-    const requests = [];
-    const toUpdate = [];
-
-    for (let ai = 0; ai < agents.length; ai++) {
-      const agentName = agents[ai];
-      const units = grouped[agentName];
-      const tabName = agentName.substring(0, 30); // Max 30 chars
-
-      const existing = existingSheets.find(s => s.title === tabName);
-
-      if (!existing) {
-        // Ajouter onglet
-        requests.push({
-          addSheet: {
-            properties: {
-              title: tabName,
-              gridProperties: { rowCount: units.length + 5, columnCount: 7 }
-            }
-          }
-        });
-      }
-      toUpdate.push({ agentName, tabName, units, sheetId: existing ? existing.sheetId : null });
-    }
-
-    // Créer les onglets manquants
-    if (requests.length > 0) {
-      log('➕ Création de ' + requests.length + ' onglet(s)…');
-      const batchRes = await sheetsAPI('POST', ':batchUpdate', { requests });
-      // Récupérer les IDs des nouveaux onglets
-      const replies = batchRes.replies || [];
-      let ri = 0;
-      for (const item of toUpdate) {
-        if (item.sheetId === null) {
-          item.sheetId = replies[ri] && replies[ri].addSheet ? replies[ri].addSheet.properties.sheetId : null;
-          ri++;
-        }
-      }
-    }
-    setProgress(20);
-
-    // Écrire les données dans chaque onglet
-    const valueRequests = [];
-    const formatRequests = [];
-
-    for (let ai = 0; ai < toUpdate.length; ai++) {
-      const { tabName, units } = toUpdate[ai];
-      const progress = 20 + Math.round((ai / toUpdate.length) * 60);
-      setProgress(progress);
-      log('✏️  Écriture onglet : ' + tabName + ' (' + units.length + ' unités)', 'info');
-
-      // En-tête
-      const header = ['Adresse', 'Appartement', 'Locataire', 'Téléphone', 'Loyer prévu', 'Disponible', 'Pièces'];
-      const dataRows = units.map(u => [
-        u.adresse, u.appartement, u.locataire, u.telephone, u.loyer_prevu, u.disponible, u.pieces
-      ]);
-
-      valueRequests.push({
-        range: tabName + '!A1',
-        values: [header, ...dataRows]
-      });
-    }
-
-    // Écriture en batch
-    log('💾 Écriture dans Google Sheets…');
-    await sheetsAPI('POST', '/values:batchUpdate', {
-      valueInputOption: 'USER_ENTERED',
-      data: valueRequests
+function sheetsAPI(method, endpoint, body) {
+  var sheetId = document.getElementById("sheet-id").value.trim();
+  var url = "https://sheets.googleapis.com/v4/spreadsheets/" + sheetId + endpoint;
+  return fetch(url, {
+    method: method,
+    headers: { "Authorization": "Bearer " + accessToken, "Content-Type": "application/json" },
+    body: body ? JSON.stringify(body) : undefined
+  }).then(function(res) {
+    return res.json().then(function(data) {
+      if (!res.ok) throw new Error((data.error && data.error.message) || res.status);
+      return data;
     });
-    setProgress(85);
+  });
+}
 
-    // Formatage : en-tête en gras / couleur
-    const formatReqs = [];
-    const updatedSheets = (await sheetsAPI('GET', '?fields=sheets.properties')).sheets.map(s => s.properties);
-
-    for (const { tabName } of toUpdate) {
-      const sheet = updatedSheets.find(s => s.title === tabName);
-      if (!sheet) continue;
-      const sid = sheet.sheetId;
-
-      // En-tête bleu foncé
-      formatReqs.push({
-        repeatCell: {
-          range: { sheetId: sid, startRowIndex: 0, endRowIndex: 1, startColumnIndex: 0, endColumnIndex: 7 },
-          cell: {
-            userEnteredFormat: {
-              backgroundColor: { red: 0.16, green: 0.23, blue: 0.44 },
-              textFormat: { bold: true, foregroundColor: { red: 1, green: 1, blue: 1 }, fontSize: 10 }
+function lancerAgent() {
+  if (!accessToken) { alert("Connecte-toi a Google!"); return; }
+  if (!parsedUnits.length) { alert("Charge un fichier Excel!"); return; }
+  var sheetId = document.getElementById("sheet-id").value.trim();
+  if (!sheetId) { alert("Entre l'ID du Sheet!"); return; }
+  var btn = document.getElementById("btn-run");
+  btn.disabled = true;
+  document.getElementById("run-txt").textContent = "En cours...";
+  document.getElementById("log").innerHTML = "";
+  document.getElementById("link-area").innerHTML = "";
+  setProgress(0);
+  var grouped = groupByAgent(parsedUnits);
+  var agents = Object.keys(grouped);
+  log("Demarrage agent LeLogeur v7", "in");
+  log(parsedUnits.length + " unites - " + agents.length + " agents");
+  setProgress(5);
+  sheetsAPI("GET", "?fields=sheets.properties").then(function(spreadsheet) {
+    var existing = spreadsheet.sheets.map(function(s) { return s.properties; });
+    log(existing.length + " onglets existants");
+    setProgress(10);
+    var requests = [];
+    var toUpdate = [];
+    agents.forEach(function(agentName) {
+      var tabName = agentName.substring(0, 30);
+      var found = null;
+      existing.forEach(function(s) { if (s.title === tabName) found = s; });
+      if (!found) {
+        requests.push({ addSheet: { properties: { title: tabName } } });
+      }
+      toUpdate.push({ agentName: agentName, tabName: tabName, units: grouped[agentName], sheetId: found ? found.sheetId : null });
+    });
+    var addPromise = requests.length > 0
+      ? sheetsAPI("POST", ":batchUpdate", { requests: requests }).then(function(res) {
+          var replies = res.replies || [];
+          var ri = 0;
+          toUpdate.forEach(function(item) {
+            if (item.sheetId === null) {
+              item.sheetId = replies[ri] && replies[ri].addSheet ? replies[ri].addSheet.properties.sheetId : null;
+              ri++;
             }
-          },
-          fields: 'userEnteredFormat(backgroundColor,textFormat)'
-        }
+          });
+        })
+      : Promise.resolve();
+    return addPromise.then(function() {
+      setProgress(25);
+      var valueData = toUpdate.map(function(item) {
+        var header = ["Adresse", "Appartement", "Locataire", "Telephone", "Loyer prevu", "Disponible", "Pieces"];
+        var dataRows = item.units.map(function(u) {
+          return [u.adresse, u.appartement, u.locataire, u.telephone, u.loyer_prevu, u.disponible, u.pieces];
+        });
+        log("Ecriture : " + item.tabName + " (" + item.units.length + " unites)", "in");
+        return { range: item.tabName + "!A1", values: [header].concat(dataRows) };
       });
-    }
-
-    if (formatReqs.length > 0) {
-      await sheetsAPI('POST', ':batchUpdate', { requests: formatReqs });
-    }
+      return sheetsAPI("POST", "/values:batchUpdate", { valueInputOption: "USER_ENTERED", data: valueData });
+    });
+  }).then(function() {
     setProgress(95);
-
-    log('✅ Export terminé avec succès!', 'ok');
-    log('  ' + toUpdate.length + ' onglets mis à jour', 'ok');
+    var sheetId = document.getElementById("sheet-id").value.trim();
+    log("Export termine!", "ok");
     setProgress(100);
-
-    document.getElementById('link-area').innerHTML =
-      '<a class="result-link" href="https://docs.google.com/spreadsheets/d/' + sheetId + '" target="_blank"><span>📊 Ouvrir le Google Sheet</span><span>↗</span></a>';
-
-    markDone('s4');
-    document.getElementById('run-txt').textContent = '✅ Export terminé!';
-    document.getElementById('run-ico').textContent = '✅';
-    document.getElementById('btn-run').classList.remove('btn-primary');
-    document.getElementById('btn-run').classList.add('btn-ok');
-
-  } catch (err) {
-    log('❌ Erreur : ' + err.message, 'err');
-    setProgress(0);
-  } finally {
+    document.getElementById("link-area").innerHTML =
+      '<a class="rl" href="https://docs.google.com/spreadsheets/d/' + sheetId + '" target="_blank">Ouvrir le Google Sheet &#8599;</a>';
+    markDone("s4");
+    document.getElementById("run-txt").textContent = "Export termine!";
     btn.disabled = false;
-  }
+  }).catch(function(err) {
+    log("Erreur : " + err.message, "er");
+    setProgress(0);
+    btn.disabled = false;
+  });
 }
 </script>
 </body>
