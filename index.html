@@ -203,16 +203,30 @@ function processFile(file) {
 
 function parseExcel(rows) {
   if (!rows || rows.length < 2) return [];
-  var headerIdx = -1;
-  for (var i = 0; i < Math.min(15, rows.length); i++) {
-    var r = rows[i].map(function(c) { return String(c).toLowerCase(); });
-    if (r.some(function(c) { return c.indexOf("adresse") >= 0 || c.indexOf("appartement") >= 0 || c.indexOf("locataire") >= 0; })) {
-      headerIdx = i; break;
-    }
+
+  // Format Proprio Expert:
+  // - Ligne adresse : "LELOGEUR\n100 POM, 100 du Pomerol..." dans col A
+  // - Ligne en-tetes : Appartement | Locataire | Tel | Loyer | Dispo | Pieces
+  // - Lignes donnees : unites
+
+  var units = [];
+  var curAdresse = "";
+  var curAgent = "";
+  var CI = null; // colonnes, detectees apres en-tete
+
+  function isHeaderRow(row) {
+    var r = row.map(function(c){ return String(c).toLowerCase().trim(); });
+    return r.some(function(c){ return c === "appartement" || c === "locataire"; });
   }
-  if (headerIdx < 0) headerIdx = 0;
-  var headers = rows[headerIdx].map(function(c) { return String(c).toLowerCase().trim(); });
-  function col(kws) {
+
+  function isAddressRow(row) {
+    var first = String(row[0] || "").trim();
+    // Ligne adresse : contient une adresse ou "LELOGEUR" et les autres colonnes sont vides
+    var nonEmpty = row.filter(function(c){ return String(c).trim() !== ""; }).length;
+    return nonEmpty <= 2 && first.length > 10 && !isHeaderRow(row);
+  }
+
+  function col(headers, kws) {
     for (var k = 0; k < kws.length; k++) {
       for (var j = 0; j < headers.length; j++) {
         if (headers[j].indexOf(kws[k]) >= 0) return j;
@@ -220,41 +234,68 @@ function parseExcel(rows) {
     }
     return -1;
   }
-  var CI = {
-    adresse: col(["adresse","immeuble","batiment"]),
-    app: col(["appartement","app","logement","unite"]),
-    locataire: col(["locataire","tenant"]),
-    telephone: col(["telephone","tel","phone","cellulaire"]),
-    loyer: col(["loyer","montant","prix","rent"]),
-    dispo: col(["disponible","dispo","libre"]),
-    pieces: col(["pieces","grandeur","type","chambre"]),
-    agent: col(["agent","responsable","gestionnaire"])
-  };
-  var units = [];
-  var curAdresse = "";
-  var curAgent = "";
-  for (var i = headerIdx + 1; i < rows.length; i++) {
+
+  for (var i = 0; i < rows.length; i++) {
     var row = rows[i];
-    var v = function(k) { return CI[k] >= 0 ? String(row[CI[k]] || "").trim() : ""; };
-    var adresse = v("adresse");
+    var first = String(row[0] || "").trim();
+
+    // Ligne vide
+    if (row.every(function(c){ return String(c).trim() === ""; })) continue;
+
+    // Ligne adresse du batiment
+    if (isAddressRow(row)) {
+      // Extraire l'adresse propre (enlever le code court type "100 POM, ")
+      var addrRaw = first.replace(/^[A-ZÀ-ÿ0-9]+
+/, ""); // enlever "LELOGEUR
+"
+      addrRaw = addrRaw.replace(/^\S+,\s*/, ""); // enlever "100 POM, "
+      curAdresse = addrRaw.split(",")[0].trim() || first; // garder "100 du Pomerol"
+      CI = null; // reset colonnes pour ce batiment
+      continue;
+    }
+
+    // Ligne en-tetes
+    if (isHeaderRow(row)) {
+      var headers = row.map(function(c){ return String(c).toLowerCase().trim(); });
+      CI = {
+        app:       col(headers, ["appartement","app","logement"]),
+        locataire: col(headers, ["locataire","tenant"]),
+        telephone: col(headers, ["téléphone","telephone","tél","tel","phone","cell"]),
+        loyer:     col(headers, ["loyer","montant","prix","rent"]),
+        dispo:     col(headers, ["disponible","dispo","libre"]),
+        pieces:    col(headers, ["pièces","pièce","piéces","pieces","pi","grandeur","type"]),
+        agent:     col(headers, ["agent","responsable","gestionnaire"])
+      };
+      continue;
+    }
+
+    // Ligne de donnee (unite)
+    if (!CI) continue;
+    function v(k) { return CI[k] >= 0 ? String(row[CI[k]] || "").trim() : ""; }
     var app = v("app");
     var locataire = v("locataire");
-    var telephone = v("telephone");
     var loyer = v("loyer");
-    var dispo = v("dispo");
-    var pieces = v("pieces");
     var agent = v("agent");
-    if (adresse) curAdresse = adresse;
-    if (agent) curAgent = agent;
+
+    // Ignorer les lignes sans donnee utile
     if (!app && !locataire && !loyer) continue;
+
+    // Ignorer si "app" ressemble a une adresse civique (contient des lettres longues)
+    if (app && app.length > 10 && /[a-zA-ZÀ-ÿ]{3,}/.test(app)) {
+      curAdresse = app;
+      continue;
+    }
+
+    if (agent) curAgent = agent;
+
     units.push({
-      adresse: adresse || curAdresse,
+      adresse: curAdresse,
       appartement: app,
       locataire: locataire,
-      telephone: telephone,
+      telephone: v("telephone"),
       loyer_prevu: loyer,
-      disponible: dispo,
-      pieces: pieces,
+      disponible: v("dispo"),
+      pieces: v("pieces"),
       agent: agent || curAgent || "Non assigne"
     });
   }
