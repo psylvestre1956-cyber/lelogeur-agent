@@ -281,7 +281,7 @@ function parseExcel(rows) {
     if (!app && !locataire && !loyer) continue;
 
     // Ignorer si "app" ressemble a une adresse civique (contient des lettres longues)
-    if (app && app.length > 10 && /[a-zA-ZÀ-ÿ]{3,}/.test(app)) {
+    if (app && app.length > 10 && app.replace(/[^a-zA-Z]/g,"").length > 3) {
       curAdresse = app;
       continue;
     }
