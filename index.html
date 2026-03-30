@@ -105,6 +105,7 @@ input[type=text]:focus{border-color:var(--acc)}
 var accessToken = "";
 var parsedUnits = [];
 var REDIRECT = "https://psylvestre1956-cyber.github.io/lelogeur-agent/";
+var CLIENT_ID_DEFAULT = "1048377543224-56s899bif9r7vrvme12uercg0noh87nq.apps.googleusercontent.com";
 
 function log(msg, type) {
   var b = document.getElementById("log");
@@ -129,33 +130,67 @@ function markDone(id) {
   el.textContent = "✓";
 }
 
+function setAuthOK() {
+  document.getElementById("auth-txt").textContent = "Connecté Google ✓";
+  document.getElementById("auth-ico").textContent = "✓";
+  document.getElementById("btn-auth").style.background = "linear-gradient(135deg,#1a6b4a,#0d4a32)";
+  markDone("s1");
+  unlock("card2");
+  unlock("card3");
+  unlock("card4");
+}
+
 function connecterGoogle() {
   var clientId = document.getElementById("client-id").value.trim();
   if (!clientId) { alert("Entre le Client ID Google!"); return; }
+  // Sauvegarder le client ID pour la prochaine fois
+  try { localStorage.setItem("ll_client_id", clientId); } catch(e) {}
   var params = new URLSearchParams({
     client_id: clientId,
     redirect_uri: REDIRECT,
     response_type: "token",
     scope: "https://www.googleapis.com/auth/spreadsheets",
-    prompt: "consent"
+    prompt: "consent",
+    include_granted_scopes: "true"
   });
   window.location.href = "https://accounts.google.com/o/oauth2/v2/auth?" + params.toString();
 }
 
-(function checkToken() {
-  var hash = new URLSearchParams(window.location.hash.substring(1));
-  var tok = hash.get("access_token");
-  if (tok) {
-    accessToken = tok;
+(function init() {
+  // Pré-remplir le Client ID (localStorage en priorité, sinon la valeur par défaut)
+  var savedId = "";
+  try { savedId = localStorage.getItem("ll_client_id") || ""; } catch(e) {}
+  document.getElementById("client-id").value = savedId || CLIENT_ID_DEFAULT;
+
+  // Détecter le token OAuth dans le hash de l'URL (retour de Google)
+  var rawHash = window.location.hash;
+  if (rawHash && rawHash.length > 1) {
+    var hash = new URLSearchParams(rawHash.substring(1));
+    var tok = hash.get("access_token");
+    var err = hash.get("error");
+    // Nettoyer l'URL immédiatement
     window.history.replaceState({}, "", window.location.pathname);
-    document.getElementById("auth-txt").textContent = "Connecte Google";
-    document.getElementById("auth-ico").textContent = "✓";
-    document.getElementById("btn-auth").style.background = "linear-gradient(135deg,#1a6b4a,#0d4a32)";
-    markDone("s1");
-    unlock("card2");
-    unlock("card3");
-    unlock("card4");
+    if (tok) {
+      accessToken = tok;
+      try { sessionStorage.setItem("ll_token", tok); } catch(e) {}
+      setAuthOK();
+      // Afficher un message dans le log si la carte 4 est visible
+      setTimeout(function() {
+        log("Connexion Google réussie — token actif.", "ok");
+      }, 100);
+    } else if (err) {
+      alert("Erreur OAuth Google : " + err + "\nVérifiez la configuration dans Google Cloud Console.");
+    }
   }
+
+  // Vérifier si on a un token en sessionStorage (navigation interne)
+  try {
+    var sess = sessionStorage.getItem("ll_token");
+    if (sess && !accessToken) {
+      accessToken = sess;
+      setAuthOK();
+    }
+  } catch(e) {}
 })();
 
 function onDragOver(e) { e.preventDefault(); document.getElementById("drop").classList.add("over"); }
@@ -245,9 +280,7 @@ function parseExcel(rows) {
     // Ligne adresse du batiment
     if (isAddressRow(row)) {
       // Extraire l'adresse propre (enlever le code court type "100 POM, ")
-      var addrRaw = first.replace(/^[A-ZÀ-ÿ0-9]+
-/, ""); // enlever "LELOGEUR
-"
+      var addrRaw = first.replace(/^[A-ZÀ-ÿ0-9]+\n/, ""); // enlever "LELOGEUR\n"
       addrRaw = addrRaw.replace(/^\S+,\s*/, ""); // enlever "100 POM, "
       curAdresse = addrRaw.split(",")[0].trim() || first; // garder "100 du Pomerol"
       CI = null; // reset colonnes pour ce batiment
