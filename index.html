@@ -247,24 +247,41 @@ function parseExcel(rows) {
   var units = [];
   var curAdresse = "";
   var curAgent = "";
-  var CI = null; // colonnes, detectees apres en-tete
+  var CI = null;
+
+  // Normalise les accents pour une detection robuste des en-tetes
+  function norm(s) {
+    return String(s || "").toLowerCase().trim()
+      .normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  }
 
   function isHeaderRow(row) {
-    var r = row.map(function(c){ return String(c).toLowerCase().trim(); });
-    return r.some(function(c){ return c === "appartement" || c === "locataire"; });
+    return row.some(function(c) {
+      var n = norm(c);
+      return n === "appartement" || n === "logement" || n === "locataire";
+    });
   }
 
   function isAddressRow(row) {
     var first = String(row[0] || "").trim();
-    // Ligne adresse : contient une adresse ou "LELOGEUR" et les autres colonnes sont vides
+    if (isHeaderRow(row)) return false;
+    // Trop de colonnes remplies = ligne de donnees, pas une adresse
     var nonEmpty = row.filter(function(c){ return String(c).trim() !== ""; }).length;
-    return nonEmpty <= 2 && first.length > 10 && !isHeaderRow(row);
+    if (nonEmpty > 3) return false;
+    if (first.length < 6) return false;
+    // Contient "LELOGEUR" (en-tete Proprio Expert)
+    if (first.toUpperCase().indexOf("LELOGEUR") >= 0) return true;
+    // OU : commence par un chiffre, contient une virgule et un nom de rue
+    // ex: "100 du Pomerol, Montreal"
+    return /^\d/.test(first) && first.indexOf(",") >= 0 && /[a-zA-ZÀ-ÿ]{4,}/.test(first);
   }
 
+  // Cherche l'index de colonne selon une liste de mots-cles (correspondance exacte sur mot entier)
   function col(headers, kws) {
     for (var k = 0; k < kws.length; k++) {
       for (var j = 0; j < headers.length; j++) {
-        if (headers[j].indexOf(kws[k]) >= 0) return j;
+        // Correspondance exacte OU le header contient le mot-cle comme sous-chaine entiere
+        if (headers[j] === kws[k] || headers[j].indexOf(kws[k]) >= 0) return j;
       }
     }
     return -1;
@@ -279,30 +296,30 @@ function parseExcel(rows) {
 
     // Ligne adresse du batiment
     if (isAddressRow(row)) {
-      // Extraire l'adresse propre (enlever le code court type "100 POM, ")
       var addrRaw = first.replace(/^[A-ZÀ-ÿ0-9]+\n/, ""); // enlever "LELOGEUR\n"
-      addrRaw = addrRaw.replace(/^\S+,\s*/, ""); // enlever "100 POM, "
-      curAdresse = addrRaw.split(",")[0].trim() || first; // garder "100 du Pomerol"
-      CI = null; // reset colonnes pour ce batiment
+      addrRaw = addrRaw.replace(/^\S+,\s*/, "");            // enlever "100 POM, "
+      curAdresse = addrRaw.split(",")[0].trim() || first;
+      CI = null;
       continue;
     }
 
-    // Ligne en-tetes
+    // Ligne en-tetes — normaliser pour gerer les accents manquants/mauvais
     if (isHeaderRow(row)) {
-      var headers = row.map(function(c){ return String(c).toLowerCase().trim(); });
+      var headers = row.map(norm);
       CI = {
-        app:       col(headers, ["appartement","app","logement"]),
-        locataire: col(headers, ["locataire","tenant"]),
-        telephone: col(headers, ["téléphone","telephone","tél","tel","phone","cell"]),
-        loyer:     col(headers, ["loyer","montant","prix","rent"]),
+        app:       col(headers, ["appartement","logement","app","unite"]),
+        locataire: col(headers, ["locataire","tenant","occupant"]),
+        telephone: col(headers, ["telephone","tel","phone","cell"]),
+        loyer:     col(headers, ["loyer prevu","loyer","montant","rent"]),
         dispo:     col(headers, ["disponible","dispo","libre"]),
-        pieces:    col(headers, ["pièces","pièce","piéces","pieces","pi","grandeur","type"]),
+        // BUG FIX #3 : "pi" seul retiré (matchait "prix"). On normalise les accents.
+        pieces:    col(headers, ["pieces","piece","grandeur","nbre p","nb p","# p"]),
         agent:     col(headers, ["agent","responsable","gestionnaire"])
       };
       continue;
     }
 
-    // Ligne de donnee (unite)
+    // Ligne de donnee
     if (!CI) continue;
     function v(k) { return CI[k] >= 0 ? String(row[CI[k]] || "").trim() : ""; }
     var app = v("app");
@@ -313,23 +330,25 @@ function parseExcel(rows) {
     // Ignorer les lignes sans donnee utile
     if (!app && !locataire && !loyer) continue;
 
-    // Ignorer si "app" ressemble a une adresse civique (contient des lettres longues)
-    if (app && app.length > 10 && app.replace(/[^a-zA-Z]/g,"").length > 3) {
-      curAdresse = app;
-      continue;
-    }
+    // BUG FIX #2 : ignorer les lignes-separateurs avec seulement un numero civique
+    // ex: "200" | "" | "" | "" dans Myriam — c'est un sous-groupe, pas une unite
+    if (app && !locataire && !loyer && /^\d{1,5}[A-Za-z]?$/.test(app.replace(/[\s\-]/g, ""))) continue;
+
+    // BUG FIX #1 : SUPPRIME la logique qui re-ecrasait curAdresse depuis une ligne de donnees
+    // (anciennement : if app.length > 10 && lettres > 3 → curAdresse = app)
+    // Cette logique causait le doublement d'adresse dans Maria.
 
     if (agent) curAgent = agent;
 
     units.push({
-      adresse: curAdresse,
-      appartement: app,
-      locataire: locataire,
-      telephone: v("telephone"),
-      loyer_prevu: loyer,
-      disponible: v("dispo"),
-      pieces: v("pieces"),
-      agent: agent || curAgent || "Non assigne"
+      adresse:      curAdresse,
+      appartement:  app,
+      locataire:    locataire,
+      telephone:    v("telephone"),
+      loyer_prevu:  loyer,
+      disponible:   v("dispo"),
+      pieces:       v("pieces"),
+      agent:        agent || curAgent || "Non assigne"
     });
   }
   return units;
